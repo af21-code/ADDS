@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from .parameters import (
+    CouplingParameters,
     EngineParameters,
     EnvironmentParameters,
+    SafetyParameters,
     SolverParameters,
     TransmissionParameters,
     VehicleParameters,
@@ -52,6 +54,26 @@ def default_simulation_config() -> SimulationConfig:
             efficiency_motoring=0.94,
             efficiency_overrun=0.92,
             shift_time=0.0,
+        ),
+        coupling=CouplingParameters(
+            max_torque_capacity=320.0,
+            opening_time=0.30,
+            closing_time=0.35,
+            locked_slip_threshold=2.0,
+            reengagement_slip_limit=8.0,
+            reengagement_torque_limit=80.0,
+            max_slip_energy_per_event=25_000.0,
+            max_slip_power=80_000.0,
+            min_mode_dwell_time=0.10,
+        ),
+        safety=SafetyParameters(
+            min_vehicle_speed_for_decoupling=5.0,
+            max_vehicle_speed=70.0,
+            brake_demand_decouple_block_threshold=0.05,
+            positive_torque_reconnect_threshold=0.05,
+            max_engine_speed_overshoot=20.0,
+            fallback_timeout=1.0,
+            max_supervisor_overrides_per_km=5.0,
         ),
         solver=SolverParameters(
             plant_time_step=0.02,

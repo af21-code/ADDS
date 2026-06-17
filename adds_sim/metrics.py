@@ -33,6 +33,12 @@ def summarize_run(result: SimulationResult) -> dict[str, float | int | bool | st
     residual = float(final["energy_balance_residual"])
     fuel_energy = result.final_state.fuel_energy
     residual_basis = max(abs(fuel_energy), abs(result.final_state.kinetic_energy_initial), 1.0)
+    safety_override_count = sum(1 for record in records if bool(record["safety_override"]))
+    fallback_entry_count = sum(
+        1
+        for previous, current in zip((None, *records[:-1]), records)
+        if bool(current["fallback_active"]) and (previous is None or not bool(previous["fallback_active"]))
+    )
 
     return {
         "scenario_id": result.scenario_id,
@@ -57,9 +63,9 @@ def summarize_run(result: SimulationResult) -> dict[str, float | int | bool | st
         "max_acceleration": max(accelerations),
         "max_deceleration": abs(min(accelerations)),
         "max_jerk": max((abs(jerk) for jerk in jerks), default=0.0),
-        "mode_transition_count": 0,
+        "mode_transition_count": int(final["transition_count"]),
         "hard_constraint_violation_count": 0,
-        "safety_override_count": 0,
-        "fallback_entry_count": 0,
+        "safety_override_count": safety_override_count,
+        "fallback_entry_count": fallback_entry_count,
         "numerical_failure": False,
     }

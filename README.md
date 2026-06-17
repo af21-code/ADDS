@@ -117,12 +117,13 @@ constraints remain comparable.
     `-- vehicle_dynamics.md
 |-- pyproject.toml
 `-- tests
-    `-- test_phase1_acceptance.py
+    |-- test_phase1_acceptance.py
+    `-- test_phase2_state_machine.py
 ```
 
-The current implementation is intentionally limited to Phase 1 physical
-simulation and verification. ADDS transition logic, rev-matching control, and
-machine learning are deferred until the conventional plant is stable.
+The current implementation covers the initial Phase 1 physical simulator and a
+first Phase 2 drivetrain state machine. Machine learning and optimized ADDS
+policy training are deferred until deterministic baselines are stronger.
 
 ## Documentation
 
@@ -156,7 +157,7 @@ machine learning are deferred until the conventional plant is stable.
 ## Current Status
 
 The project has completed its initial documentation and system-definition phase.
-A Phase 1 Python simulator now provides:
+The Python simulator now provides:
 
 - Deterministic fixed-step longitudinal vehicle dynamics.
 - Aerodynamic drag, rolling resistance, grade force, tire-force limits, and
@@ -164,13 +165,20 @@ A Phase 1 Python simulator now provides:
 - Basic connected-drivetrain engine, transmission, final-drive, fuel, and loss
   modeling.
 - Constant torque, coast-down, and speed-tracking controllers.
+- A first ADDS state machine with `CONNECTED`, `DECOUPLING`, `DECOUPLED`,
+  `REV_MATCHING`, `REENGAGING`, and `FAULT_SAFE` modes.
+- Deterministic transition guards for brake-demand blocking, low-speed blocking,
+  fault fallback, and re-engagement slip limits.
+- Basic rev-matching and controlled re-engagement behavior.
 - Physical logging and summary metrics.
-- Unit tests for the initial Phase 1 acceptance cases.
+- Unit tests for the initial Phase 1 and Phase 2 acceptance cases.
 
-ADDS state transitions, rev-matching, re-engagement, and ML controllers have not
-been implemented yet.
+The current Phase 2 implementation is intentionally simple. It is suitable for
+state-machine verification and early transition studies, not for production
+drivetrain control or real vehicle claims. ML controllers have not been
+implemented yet.
 
-## Running The Phase 1 Simulator
+## Running The Simulator
 
 Run the acceptance tests:
 

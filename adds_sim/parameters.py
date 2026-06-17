@@ -134,6 +134,58 @@ class TransmissionParameters:
 
 
 @dataclass(frozen=True)
+class CouplingParameters:
+    """Controllable drivetrain coupling parameters."""
+
+    max_torque_capacity: float
+    opening_time: float
+    closing_time: float
+    locked_slip_threshold: float
+    reengagement_slip_limit: float
+    reengagement_torque_limit: float
+    max_slip_energy_per_event: float
+    max_slip_power: float
+    min_mode_dwell_time: float
+
+    def validate(self) -> None:
+        _require_positive("coupling.max_torque_capacity", self.max_torque_capacity)
+        _require_positive("coupling.opening_time", self.opening_time)
+        _require_positive("coupling.closing_time", self.closing_time)
+        _require_non_negative("coupling.locked_slip_threshold", self.locked_slip_threshold)
+        _require_non_negative("coupling.reengagement_slip_limit", self.reengagement_slip_limit)
+        _require_non_negative("coupling.reengagement_torque_limit", self.reengagement_torque_limit)
+        _require_positive("coupling.max_slip_energy_per_event", self.max_slip_energy_per_event)
+        _require_positive("coupling.max_slip_power", self.max_slip_power)
+        _require_non_negative("coupling.min_mode_dwell_time", self.min_mode_dwell_time)
+
+
+@dataclass(frozen=True)
+class SafetyParameters:
+    """Safety-supervisor guard thresholds."""
+
+    min_vehicle_speed_for_decoupling: float
+    max_vehicle_speed: float
+    brake_demand_decouple_block_threshold: float
+    positive_torque_reconnect_threshold: float
+    max_engine_speed_overshoot: float
+    fallback_timeout: float
+    max_supervisor_overrides_per_km: float
+
+    def validate(self) -> None:
+        _require_non_negative("safety.min_vehicle_speed_for_decoupling", self.min_vehicle_speed_for_decoupling)
+        _require_positive("safety.max_vehicle_speed", self.max_vehicle_speed)
+        _require_non_negative("safety.brake_demand_decouple_block_threshold", self.brake_demand_decouple_block_threshold)
+        if self.brake_demand_decouple_block_threshold > 1.0:
+            raise ValueError("safety.brake_demand_decouple_block_threshold must be <= 1")
+        _require_non_negative("safety.positive_torque_reconnect_threshold", self.positive_torque_reconnect_threshold)
+        if self.positive_torque_reconnect_threshold > 1.0:
+            raise ValueError("safety.positive_torque_reconnect_threshold must be <= 1")
+        _require_non_negative("safety.max_engine_speed_overshoot", self.max_engine_speed_overshoot)
+        _require_positive("safety.fallback_timeout", self.fallback_timeout)
+        _require_non_negative("safety.max_supervisor_overrides_per_km", self.max_supervisor_overrides_per_km)
+
+
+@dataclass(frozen=True)
 class SolverParameters:
     """Fixed-step solver and logging parameters."""
 

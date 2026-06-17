@@ -7,8 +7,10 @@ from math import cos, sin
 
 from .controllers import Controller
 from .parameters import (
+    CouplingParameters,
     EngineParameters,
     EnvironmentParameters,
+    SafetyParameters,
     SolverParameters,
     TransmissionParameters,
     VehicleParameters,
@@ -22,6 +24,8 @@ class SimulationConfig:
     environment: EnvironmentParameters
     engine: EngineParameters
     transmission: TransmissionParameters
+    coupling: CouplingParameters
+    safety: SafetyParameters
     solver: SolverParameters
 
     def validate(self) -> None:
@@ -29,6 +33,8 @@ class SimulationConfig:
         self.environment.validate()
         self.engine.validate()
         self.transmission.validate()
+        self.coupling.validate()
+        self.safety.validate()
         self.solver.validate()
 
 
@@ -42,6 +48,8 @@ class Scenario:
     target_speed_profile: ScalarProfile = ConstantProfile(0.0)
     grade_profile: ScalarProfile = ConstantProfile(0.0)
     drivetrain_connected: bool = True
+    adds_enabled: bool = False
+    initial_coupling_mode: str | None = None
     random_seed: int = 0
 
     def validate(self, config: SimulationConfig) -> None:
@@ -52,6 +60,8 @@ class Scenario:
         if self.distance_limit is not None and self.distance_limit <= 0.0:
             raise ValueError("scenario.distance_limit must be > 0 when set")
         config.transmission.gear_ratio(self.initial_gear)
+        if self.initial_coupling_mode is not None and self.initial_coupling_mode not in COUPLING_MODES:
+            raise ValueError(f"unknown initial_coupling_mode: {self.initial_coupling_mode}")
 
 
 @dataclass
@@ -61,6 +71,14 @@ class VehicleState:
     position: float
     speed: float
     acceleration: float
+    engine_speed: float
+    coupling_mode: str
+    mode_time: float
+    transition_count: int
+    target_gear: int
+    coupling_capacity: float
+    last_safety_override: bool
+    last_safety_override_reason: str
     fuel_used: float
     aero_energy: float
     rolling_resistance_energy: float
@@ -71,6 +89,16 @@ class VehicleState:
     fuel_energy: float
     kinetic_energy_initial: float
     potential_energy_change: float
+
+
+COUPLING_MODES = {
+    "CONNECTED",
+    "DECOUPLING",
+    "DECOUPLED",
+    "REV_MATCHING",
+    "REENGAGING",
+    "FAULT_SAFE",
+}
 
 
 @dataclass(frozen=True)
@@ -158,13 +186,29 @@ class LongitudinalSimulator:
         )
 
     def _initial_state(self, scenario: Scenario) -> VehicleState:
-        kinetic = 0.5 * self.equivalent_mass(scenario.initial_gear, scenario.drivetrain_connected) * scenario.initial_speed**2
+        mode = self._initial_coupling_mode(scenario)
+        drivetrain_connected = self._mode_has_locked_drivetrain(mode)
+        engine_speed = (
+            self.synchronous_engine_speed(scenario.initial_speed, scenario.initial_gear)
+            if drivetrain_connected
+            else self.config.engine.idle_speed
+        )
+        engine_speed = max(engine_speed, self.config.engine.min_operating_speed)
+        kinetic = 0.5 * self.equivalent_mass(scenario.initial_gear, drivetrain_connected) * scenario.initial_speed**2
         return VehicleState(
             time=0.0,
             step_index=0,
             position=0.0,
             speed=scenario.initial_speed,
             acceleration=0.0,
+            engine_speed=engine_speed,
+            coupling_mode=mode,
+            mode_time=0.0,
+            transition_count=0,
+            target_gear=scenario.initial_gear,
+            coupling_capacity=self.config.coupling.max_torque_capacity if drivetrain_connected else 0.0,
+            last_safety_override=False,
+            last_safety_override_reason="",
             fuel_used=0.0,
             aero_energy=0.0,
             rolling_resistance_energy=0.0,
@@ -177,6 +221,17 @@ class LongitudinalSimulator:
             potential_energy_change=0.0,
         )
 
+    @staticmethod
+    def _mode_has_locked_drivetrain(mode: str) -> bool:
+        return mode in {"CONNECTED", "DECOUPLING", "FAULT_SAFE"}
+
+    def _initial_coupling_mode(self, scenario: Scenario) -> str:
+        if scenario.initial_coupling_mode is not None:
+            return scenario.initial_coupling_mode
+        if scenario.adds_enabled:
+            return "CONNECTED" if scenario.drivetrain_connected else "DECOUPLED"
+        return "CONNECTED" if scenario.drivetrain_connected else "DECOUPLED"
+
     def _step(
         self,
         scenario: Scenario,
@@ -184,20 +239,29 @@ class LongitudinalSimulator:
         state: VehicleState,
         dt: float,
     ) -> tuple[dict[str, float | int | str | bool], VehicleState]:
-        gear = scenario.initial_gear
+        gear = state.target_gear if scenario.adds_enabled else scenario.initial_gear
         grade = scenario.grade_profile.value_at(state.position)
         target_speed = scenario.target_speed_profile.value_at(state.time)
         total_ratio = self.config.transmission.total_ratio(gear)
         forces = self.resistive_forces(state.speed, grade)
         force_to_hold = forces["aero_force"] + forces["rolling_resistance_force"] + forces["grade_force"]
-        engine_speed = self.synchronous_engine_speed(state.speed, gear) if scenario.drivetrain_connected else self.config.engine.idle_speed
-        engine_speed = max(engine_speed, self.config.engine.min_operating_speed)
+        current_mode = state.coupling_mode if scenario.adds_enabled else self._initial_coupling_mode(scenario)
+        drivetrain_locked = self._mode_has_locked_drivetrain(current_mode)
+        engine_speed_observed = (
+            self.synchronous_engine_speed(state.speed, gear)
+            if drivetrain_locked
+            else state.engine_speed
+        )
+        engine_speed_observed = max(engine_speed_observed, self.config.engine.min_operating_speed)
 
         observation = {
             "time": state.time,
             "position": state.position,
             "vehicle_speed": state.speed,
             "vehicle_acceleration": state.acceleration,
+            "engine_speed": engine_speed_observed,
+            "coupling_mode": current_mode,
+            "mode_time": state.mode_time,
             "target_speed": target_speed,
             "road_grade": grade,
             "force_to_hold_speed": force_to_hold,
@@ -208,14 +272,47 @@ class LongitudinalSimulator:
             "max_brake_force": self.config.vehicle.max_brake_force,
         }
         command = controller.command(observation)
-        gear = command.gear
+        gear = command.target_gear or command.gear
         total_ratio = self.config.transmission.total_ratio(gear)
-        engine_speed = self.synchronous_engine_speed(state.speed, gear) if scenario.drivetrain_connected else self.config.engine.idle_speed
-        engine_speed = max(engine_speed, self.config.engine.min_operating_speed)
+        mode, mode_time, transition_count, safety_override, safety_reason = self._advance_coupling_mode(
+            scenario=scenario,
+            state=state,
+            command=command,
+            gear=gear,
+            dt=dt,
+        )
+        drivetrain_locked = self._mode_has_locked_drivetrain(mode)
+        synchronous_engine_speed = self.synchronous_engine_speed(state.speed, gear)
+        engine_speed, engine_torque_request, coupling_capacity = self._engine_speed_and_request(
+            mode=mode,
+            state=state,
+            synchronous_engine_speed=synchronous_engine_speed,
+            command_engine_torque=command.engine_torque,
+            dt=dt,
+        )
 
-        engine_torque, engine_fuel_rate, engine_state = self._engine_response(command.engine_torque, engine_speed, scenario.drivetrain_connected)
+        engine_torque, engine_fuel_rate, engine_state = self._engine_response(
+            engine_torque_request,
+            engine_speed,
+            drivetrain_locked,
+        )
         wheel_speed = self.wheel_speed(state.speed)
-        wheel_torque, drivetrain_loss_power = self._wheel_torque_and_loss(engine_torque, engine_speed, wheel_speed, total_ratio, scenario.drivetrain_connected)
+        wheel_torque, drivetrain_loss_power = self._wheel_torque_and_loss(
+            engine_torque,
+            engine_speed,
+            wheel_speed,
+            total_ratio,
+            drivetrain_locked,
+        )
+        coupling_torque, coupling_slip_power, coupling_slip_step = self._coupling_effects(
+            mode=mode,
+            engine_speed=engine_speed,
+            synchronous_engine_speed=synchronous_engine_speed,
+            coupling_capacity=coupling_capacity,
+            dt=dt,
+        )
+        if mode == "REENGAGING":
+            wheel_torque += coupling_torque * total_ratio * self.config.transmission.efficiency_motoring
         drivetrain_force = wheel_torque / self.config.vehicle.wheel_radius
         tire_limit = self.tire_force_limit(grade)
         drivetrain_force = max(-tire_limit, min(tire_limit, drivetrain_force))
@@ -223,7 +320,7 @@ class LongitudinalSimulator:
         brake_force = min(max(command.brake_force, 0.0), self.config.vehicle.max_brake_force)
         brake_force = min(brake_force, tire_limit)
         net_force = drivetrain_force - brake_force - forces["aero_force"] - forces["rolling_resistance_force"] - forces["grade_force"]
-        mass_eq = self.equivalent_mass(gear, scenario.drivetrain_connected)
+        mass_eq = self.equivalent_mass(gear, drivetrain_locked)
         acceleration = net_force / mass_eq
         acceleration = max(
             -self.config.vehicle.max_longitudinal_deceleration,
@@ -245,13 +342,21 @@ class LongitudinalSimulator:
             position=next_position,
             speed=next_speed,
             acceleration=acceleration,
+            engine_speed=engine_speed,
+            coupling_mode=mode,
+            mode_time=mode_time,
+            transition_count=transition_count,
+            target_gear=gear,
+            coupling_capacity=coupling_capacity,
+            last_safety_override=safety_override,
+            last_safety_override_reason=safety_reason,
             fuel_used=state.fuel_used + fuel_step,
             aero_energy=state.aero_energy + max(forces["aero_force"] * distance_step, 0.0),
             rolling_resistance_energy=state.rolling_resistance_energy + max(forces["rolling_resistance_force"] * distance_step, 0.0),
             brake_energy=state.brake_energy + brake_force * distance_step,
             drivetrain_loss_energy=state.drivetrain_loss_energy + drivetrain_loss_power * dt,
             engine_loss_energy=state.engine_loss_energy + engine_loss_step,
-            coupling_slip_energy=state.coupling_slip_energy,
+            coupling_slip_energy=state.coupling_slip_energy + coupling_slip_step,
             fuel_energy=state.fuel_energy + fuel_energy_step,
             kinetic_energy_initial=state.kinetic_energy_initial,
             potential_energy_change=state.potential_energy_change + potential_step,
@@ -280,8 +385,8 @@ class LongitudinalSimulator:
             "brake_force": brake_force,
             "brake_power": brake_force * state.speed,
             "engine_speed": engine_speed,
-            "engine_speed_target": engine_speed,
-            "engine_torque_command": command.engine_torque if command.engine_torque is not None else self.config.engine.min_torque,
+            "engine_speed_target": synchronous_engine_speed if mode in {"REV_MATCHING", "REENGAGING"} else engine_speed,
+            "engine_torque_command": engine_torque_request if engine_torque_request is not None else self.config.engine.min_torque,
             "engine_torque": engine_torque,
             "engine_torque_available_min": self.config.engine.min_torque,
             "engine_torque_available_max": self.config.engine.max_torque,
@@ -295,15 +400,15 @@ class LongitudinalSimulator:
             "final_drive_ratio": self.config.transmission.final_drive_ratio,
             "total_drive_ratio": total_ratio,
             "synchronous_engine_speed": self.synchronous_engine_speed(next_state.speed, gear),
-            "coupling_mode": "CONNECTED" if scenario.drivetrain_connected else "DECOUPLED",
-            "coupling_capacity_command": 0.0,
-            "coupling_capacity": 0.0,
-            "coupling_torque": 0.0,
-            "coupling_slip_speed": 0.0,
-            "coupling_slip_power": 0.0,
+            "coupling_mode": mode,
+            "coupling_capacity_command": coupling_capacity,
+            "coupling_capacity": coupling_capacity,
+            "coupling_torque": coupling_torque,
+            "coupling_slip_speed": engine_speed - synchronous_engine_speed,
+            "coupling_slip_power": coupling_slip_power,
             "coupling_slip_energy": next_state.coupling_slip_energy,
-            "mode_time": next_state.time,
-            "transition_count": 0,
+            "mode_time": mode_time,
+            "transition_count": transition_count,
             "aero_force": forces["aero_force"],
             "rolling_resistance_force": forces["rolling_resistance_force"],
             "grade_force": forces["grade_force"],
@@ -315,15 +420,142 @@ class LongitudinalSimulator:
             "engine_loss_energy": next_state.engine_loss_energy,
             "energy_balance_residual": energy_balance_residual,
             "controller_name": getattr(controller, "name", controller.__class__.__name__),
-            "controller_version": "phase1",
-            "requested_mode": "CONNECTED" if scenario.drivetrain_connected else "DECOUPLED",
-            "applied_mode": "CONNECTED" if scenario.drivetrain_connected else "DECOUPLED",
-            "safety_override": False,
-            "safety_override_reason": "",
-            "fallback_active": False,
+            "controller_version": "phase2" if scenario.adds_enabled else "phase1",
+            "requested_mode": command.requested_mode,
+            "applied_mode": mode,
+            "safety_override": safety_override,
+            "safety_override_reason": safety_reason,
+            "fallback_active": mode == "FAULT_SAFE",
             "controller_latency": 0.0,
         }
         return record, next_state
+
+    def _advance_coupling_mode(
+        self,
+        scenario: Scenario,
+        state: VehicleState,
+        command,
+        gear: int,
+        dt: float,
+    ) -> tuple[str, float, int, bool, str]:
+        if not scenario.adds_enabled:
+            mode = "CONNECTED" if scenario.drivetrain_connected else "DECOUPLED"
+            return mode, state.mode_time + dt, state.transition_count, False, ""
+
+        old_mode = state.coupling_mode
+        mode = old_mode
+        mode_time = state.mode_time + dt
+        transition_count = state.transition_count
+        safety_override = False
+        safety_reason = ""
+
+        def transition(next_mode: str) -> None:
+            nonlocal mode, mode_time, transition_count
+            if next_mode != mode:
+                mode = next_mode
+                mode_time = 0.0
+                transition_count += 1
+
+        brake_demand = max(command.brake_force, 0.0) / self.config.vehicle.max_brake_force
+        positive_torque_demand = 0.0
+        if command.engine_torque is not None and command.engine_torque > 0.0:
+            positive_torque_demand = command.engine_torque / self.config.engine.max_torque
+
+        if command.force_fault:
+            safety_override = True
+            safety_reason = "FORCED_FAULT"
+            transition("FAULT_SAFE")
+            return mode, mode_time, transition_count, safety_override, safety_reason
+
+        if mode == "CONNECTED":
+            if command.requested_mode in {"DECOUPLING", "DECOUPLED"}:
+                if brake_demand > self.config.safety.brake_demand_decouple_block_threshold:
+                    safety_override = True
+                    safety_reason = "BRAKE_DEMAND_BLOCKS_DECOUPLING"
+                elif state.speed < self.config.safety.min_vehicle_speed_for_decoupling:
+                    safety_override = True
+                    safety_reason = "LOW_SPEED_BLOCKS_DECOUPLING"
+                else:
+                    transition("DECOUPLING")
+        elif mode == "DECOUPLING":
+            if brake_demand > self.config.safety.brake_demand_decouple_block_threshold:
+                safety_override = True
+                safety_reason = "BRAKE_DEMAND_CANCELS_DECOUPLING"
+                transition("CONNECTED")
+            elif mode_time >= self.config.coupling.opening_time:
+                transition("DECOUPLED")
+        elif mode == "DECOUPLED":
+            if command.requested_mode in {"REV_MATCHING", "REENGAGING", "CONNECTED"} or (
+                positive_torque_demand > self.config.safety.positive_torque_reconnect_threshold
+            ):
+                self.config.transmission.gear_ratio(gear)
+                transition("REV_MATCHING")
+        elif mode == "REV_MATCHING":
+            slip = abs(state.engine_speed - self.synchronous_engine_speed(state.speed, gear))
+            if slip <= self.config.coupling.reengagement_slip_limit:
+                transition("REENGAGING")
+        elif mode == "REENGAGING":
+            slip = abs(state.engine_speed - self.synchronous_engine_speed(state.speed, gear))
+            if mode_time >= self.config.coupling.closing_time and slip <= self.config.coupling.reengagement_slip_limit:
+                transition("CONNECTED")
+            elif slip > self.config.coupling.reengagement_slip_limit * 4.0:
+                safety_override = True
+                safety_reason = "REENGAGEMENT_SLIP_TOO_HIGH"
+                transition("REV_MATCHING")
+        elif mode == "FAULT_SAFE":
+            transition("CONNECTED")
+
+        return mode, mode_time, transition_count, safety_override, safety_reason
+
+    def _engine_speed_and_request(
+        self,
+        mode: str,
+        state: VehicleState,
+        synchronous_engine_speed: float,
+        command_engine_torque: float | None,
+        dt: float,
+    ) -> tuple[float, float | None, float]:
+        engine = self.config.engine
+        coupling = self.config.coupling
+        if mode in {"CONNECTED", "DECOUPLING", "FAULT_SAFE"}:
+            return max(synchronous_engine_speed, engine.min_operating_speed), command_engine_torque, coupling.max_torque_capacity
+        if mode == "DECOUPLED":
+            return engine.idle_speed, 0.0, 0.0
+
+        if mode == "REV_MATCHING":
+            error = synchronous_engine_speed - state.engine_speed
+            requested_torque = max(engine.min_torque, min(engine.max_torque, error * engine.inertia / dt))
+            next_engine_speed = state.engine_speed + requested_torque / engine.inertia * dt
+            next_engine_speed = max(engine.min_operating_speed, min(engine.max_speed, next_engine_speed))
+            return next_engine_speed, requested_torque, 0.0
+
+        if mode == "REENGAGING":
+            fraction = min(1.0, dt / self.config.coupling.closing_time)
+            next_engine_speed = state.engine_speed + (synchronous_engine_speed - state.engine_speed) * fraction
+            next_engine_speed = max(engine.min_operating_speed, min(engine.max_speed, next_engine_speed))
+            capacity_fraction = min(1.0, max(state.mode_time, 0.0) / self.config.coupling.closing_time)
+            return next_engine_speed, command_engine_torque, coupling.max_torque_capacity * capacity_fraction
+
+        return state.engine_speed, command_engine_torque, 0.0
+
+    def _coupling_effects(
+        self,
+        mode: str,
+        engine_speed: float,
+        synchronous_engine_speed: float,
+        coupling_capacity: float,
+        dt: float,
+    ) -> tuple[float, float, float]:
+        if mode != "REENGAGING":
+            return 0.0, 0.0, 0.0
+
+        slip_speed = engine_speed - synchronous_engine_speed
+        if abs(slip_speed) <= self.config.coupling.locked_slip_threshold:
+            return 0.0, 0.0, 0.0
+        damping_torque = -0.5 * slip_speed
+        coupling_torque = max(-coupling_capacity, min(coupling_capacity, damping_torque))
+        slip_power = min(abs(coupling_torque * slip_speed), self.config.coupling.max_slip_power)
+        return coupling_torque, slip_power, slip_power * dt
 
     def _engine_response(
         self,
@@ -332,7 +564,7 @@ class LongitudinalSimulator:
         drivetrain_connected: bool,
     ) -> tuple[float, float, str]:
         engine = self.config.engine
-        if not drivetrain_connected:
+        if not drivetrain_connected and (requested_torque is None or requested_torque == 0.0):
             return 0.0, engine.idle_fuel_rate, "IDLE"
 
         if requested_torque is None:

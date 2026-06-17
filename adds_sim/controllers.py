@@ -16,6 +16,9 @@ class ControlCommand:
     engine_torque: float | None
     brake_force: float
     gear: int
+    requested_mode: str = "CONNECTED"
+    target_gear: int | None = None
+    force_fault: bool = False
 
 
 class Controller:
@@ -77,3 +80,30 @@ class SpeedTrackingController(Controller):
 
         brake_force = min(-required_force, observation["max_brake_force"])
         return ControlCommand(engine_torque=0.0, brake_force=brake_force, gear=self.gear)
+
+
+@dataclass(frozen=True)
+class ScriptedModeController(Controller):
+    """Time-scheduled controller useful for deterministic state-machine tests."""
+
+    gear: int
+    schedule: tuple[tuple[float, str, float | None, float, bool], ...]
+    name: str = "scripted_mode"
+
+    def command(self, observation: dict[str, float]) -> ControlCommand:
+        time = observation["time"]
+        selected = self.schedule[0]
+        for item in self.schedule:
+            if time >= item[0]:
+                selected = item
+            else:
+                break
+        _, mode, engine_torque, brake_force, force_fault = selected
+        return ControlCommand(
+            engine_torque=engine_torque,
+            brake_force=brake_force,
+            gear=self.gear,
+            requested_mode=mode,
+            target_gear=self.gear,
+            force_fault=force_fault,
+        )
