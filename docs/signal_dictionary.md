@@ -88,7 +88,7 @@ signals use SI units at system boundaries unless otherwise stated.
 | `coupling_capacity_command` | N m | Requested coupling torque capacity. |
 | `coupling_capacity` | N m | Applied coupling torque capacity after limits. |
 | `coupling_torque` | N m | Torque transmitted through the coupling. |
-| `coupling_slip_speed` | rad/s | Speed difference across the coupling. |
+| `coupling_slip_speed` | rad/s | Engine speed minus synchronous engine speed. |
 | `coupling_slip_power` | W | Instantaneous dissipated slip power. |
 | `coupling_slip_energy` | J | Cumulative energy dissipated through slip. |
 | `mode_time` | s | Time spent in the current coupling mode. |

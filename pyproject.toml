@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adds-sim"
+version = "0.1.0"
+description = "Phase 1 longitudinal simulator for ADDS: Adaptive Drivetrain Decoupling System"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "ADDS Project" }
+]
+
+[tool.setuptools]
+packages = ["adds_sim"]

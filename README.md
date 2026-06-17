@@ -93,7 +93,16 @@ constraints remain comparable.
 ```text
 .
 |-- README.md
-`-- docs
+|-- adds_sim
+|   |-- __init__.py
+|   |-- cli.py
+|   |-- controllers.py
+|   |-- defaults.py
+|   |-- metrics.py
+|   |-- parameters.py
+|   |-- profiles.py
+|   `-- simulator.py
+|-- docs
     |-- acceptance_tests.md
     |-- glossary.md
     |-- metrics.md
@@ -106,10 +115,14 @@ constraints remain comparable.
     |-- signal_dictionary.md
     |-- system_architecture.md
     `-- vehicle_dynamics.md
+|-- pyproject.toml
+`-- tests
+    `-- test_phase1_acceptance.py
 ```
 
-Implementation directories will be added only after the modeling assumptions,
-interfaces, and acceptance criteria are sufficiently defined.
+The current implementation is intentionally limited to Phase 1 physical
+simulation and verification. ADDS transition logic, rev-matching control, and
+machine learning are deferred until the conventional plant is stable.
 
 ## Documentation
 
@@ -142,8 +155,34 @@ interfaces, and acceptance criteria are sufficiently defined.
 
 ## Current Status
 
-The project is in its documentation and system-definition phase. No simulator or
-machine learning code has been implemented yet.
+The project has completed its initial documentation and system-definition phase.
+A Phase 1 Python simulator now provides:
+
+- Deterministic fixed-step longitudinal vehicle dynamics.
+- Aerodynamic drag, rolling resistance, grade force, tire-force limits, and
+  equivalent inertia.
+- Basic connected-drivetrain engine, transmission, final-drive, fuel, and loss
+  modeling.
+- Constant torque, coast-down, and speed-tracking controllers.
+- Physical logging and summary metrics.
+- Unit tests for the initial Phase 1 acceptance cases.
+
+ADDS state transitions, rev-matching, re-engagement, and ML controllers have not
+been implemented yet.
+
+## Running The Phase 1 Simulator
+
+Run the acceptance tests:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+Run the demo constant-speed scenario:
+
+```bash
+python3 -m adds_sim.cli
+```
 
 ## License
 

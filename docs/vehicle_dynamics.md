@@ -29,105 +29,153 @@ Unless explicitly stated otherwise:
 
 All sign conventions must be encoded once and tested at subsystem boundaries.
 
-## 3. Longitudinal Force Balance
+## 3. Symbol and Signal Mapping
 
-For vehicle mass \(m\), speed \(v\), and longitudinal acceleration \(\dot{v}\):
+The equations in this document use compact symbols for readability. Runtime logs
+should use the explicit signal names from the signal dictionary.
 
-\[
-m_\mathrm{eq}\dot{v}
-= F_\mathrm{tire} - F_\mathrm{aero} - F_\mathrm{roll}
-- F_\mathrm{grade} - F_\mathrm{brake}
-\]
+| Equation symbol | Runtime signal or parameter | Unit | Meaning |
+| --- | --- | --- | --- |
+| `v` | `vehicle_speed` | m/s | Longitudinal vehicle speed. |
+| `dv_dt` | `vehicle_acceleration` | m/s^2 | Longitudinal acceleration. |
+| `omega_w` | `wheel_speed` | rad/s | Driven-wheel angular speed. |
+| `omega_e` | `engine_speed` | rad/s | Engine crankshaft speed. |
+| `omega_sync` | `synchronous_engine_speed` | rad/s | Engine speed matching wheel speed in the selected or target gear. |
+| `omega_target` | `engine_speed_target` | rad/s | Engine speed target during idle control or rev-matching. |
+| `slip_speed` | `coupling_slip_speed` | rad/s | Engine-side speed minus synchronous wheel-side speed. |
+| `T_e` | `engine_torque` | N m | Delivered engine torque. |
+| `T_c` | `coupling_torque` | N m | Torque transmitted through the coupling. |
+| `P_slip` | `coupling_slip_power` | W | Power dissipated by coupling slip. |
+| `E_slip` | `coupling_slip_energy` | J | Cumulative coupling slip energy. |
+| `fuel_rate` | `engine_fuel_rate` | kg/s | Instantaneous fuel mass flow. |
 
-where \(m_\mathrm{eq}\) may include reflected rotational inertia.
+## 4. Longitudinal Force Balance
+
+For vehicle mass `m`, speed `v`, and longitudinal acceleration `dv_dt`:
+
+```text
+m_eq * dv_dt =
+    F_tire
+  - F_aero
+  - F_roll
+  - F_grade
+  - F_brake
+```
+
+where `m_eq` may include reflected rotational inertia. If explicit wheel,
+engine, or driveline inertias are modeled separately, they must not also be
+included in `m_eq`.
+
+The force terms use these signs:
+
+- `F_tire` is positive when it propels the vehicle forward.
+- `F_brake` is non-negative and opposes forward motion.
+- `F_grade` is positive uphill and negative downhill.
+- `F_aero` is positive when relative airflow creates drag and negative only in
+  strong tailwind cases where the air effectively assists forward motion.
+- `F_roll` is non-negative during forward motion and opposes travel.
 
 ### Aerodynamic Drag
 
-\[
-F_\mathrm{aero}
-= \frac{1}{2}\rho C_d A_f (v - v_\mathrm{wind})|v - v_\mathrm{wind}|
-\]
+```text
+v_rel = v - v_wind
 
-with air density \(\rho\), drag coefficient \(C_d\), frontal area \(A_f\), and
-longitudinal wind speed \(v_\mathrm{wind}\).
+F_aero = 0.5 * rho * C_d * A_f * v_rel * abs(v_rel)
+```
+
+where:
+
+- `rho` is air density.
+- `C_d` is drag coefficient.
+- `A_f` is frontal area.
+- `v_wind` is longitudinal wind speed, positive in the vehicle travel direction.
+
+With this convention, a headwind increases `v_rel`, while a tailwind decreases
+it.
 
 ### Rolling Resistance
 
 An initial model is:
 
-\[
-F_\mathrm{roll} = m g C_{rr}\cos(\theta)
-\]
+```text
+F_roll = m * g * C_rr * cos(theta)
+```
 
 for nonzero vehicle speed, with a smooth low-speed treatment to avoid a force
 discontinuity. A speed-dependent coefficient may be introduced later.
 
 ### Grade Force
 
-\[
-F_\mathrm{grade} = m g \sin(\theta)
-\]
+```text
+F_grade = m * g * sin(theta)
+```
 
-where \(\theta\) is positive uphill.
+where `theta` is positive uphill. A negative grade therefore reduces the required
+tractive force or increases the need for braking.
 
 ### Tire Force Limit
 
 The commanded longitudinal tire force must satisfy a simplified friction bound:
 
-\[
-|F_\mathrm{tire}| \leq \mu F_z
-\]
+```text
+abs(F_tire) <= mu * F_z
+```
 
-The initial model may use a lumped driven-axle normal load. Later versions can
-include load transfer and combined-slip limits.
+where `mu` is the tire-road friction coefficient and `F_z` is the normal load
+available to the driven tire model. The initial model may use a lumped normal
+load. Later versions can include axle load distribution, load transfer, and
+combined-slip limits.
 
-## 4. Wheel and Vehicle Kinematics
+## 5. Wheel and Vehicle Kinematics
 
-For effective tire radius \(r_w\), no-slip wheel speed is:
+For effective tire radius `r_w`, no-slip wheel speed is:
 
-\[
-\omega_w = \frac{v}{r_w}
-\]
+```text
+omega_w = v / r_w
+```
 
 If wheel rotational dynamics are modeled explicitly:
 
-\[
-J_w\dot{\omega}_w
-= T_\mathrm{axle} - F_\mathrm{tire}r_w - T_\mathrm{wheel,loss}
-\]
+```text
+J_w * domega_w_dt =
+    T_axle
+  - F_tire * r_w
+  - T_wheel_loss
+```
 
 The project should choose either an equivalent-mass approximation or explicit
 wheel dynamics for a given model version and avoid counting rotational inertia
 twice.
 
-## 5. Transmission Kinematics
+## 6. Transmission Kinematics
 
-For selected gear ratio \(i_g\), final-drive ratio \(i_f\), and total ratio
-\(i_t = i_g i_f\), the synchronous engine speed is:
+For selected gear ratio `i_g`, final-drive ratio `i_f`, and total ratio `i_t`:
 
-\[
-\omega_\mathrm{sync} = i_t\omega_w
-\]
+```text
+i_t = i_g * i_f
+
+omega_sync = i_t * omega_w
+```
 
 This is the target engine speed for zero-slip re-engagement in the selected gear,
 subject to engine idle and maximum-speed limits.
 
 When the coupling is locked:
 
-\[
-\omega_e \approx \omega_\mathrm{sync}
-\]
+```text
+omega_e ~= omega_sync
+```
 
-When decoupled, \(\omega_e\) and \(\omega_w\) evolve independently.
+When decoupled, `omega_e` and `omega_w` evolve independently.
 
-## 6. Engine Model
+## 7. Engine Model
 
 The initial engine model should include:
 
-- Engine speed state \(\omega_e\).
+- Engine speed state `omega_e`.
 - Commanded and delivered engine torque.
 - Speed- and command-dependent torque limits.
-- Rotational inertia \(J_e\).
+- Rotational inertia `J_e`.
 - Internal friction and pumping torque.
 - Idle-speed control.
 - Fuel rate map or calibrated approximation.
@@ -135,22 +183,27 @@ The initial engine model should include:
 
 Engine rotational dynamics while decoupled are:
 
-\[
-J_e\dot{\omega}_e
-= T_e - T_\mathrm{friction} - T_\mathrm{accessory} - T_\mathrm{coupling,e}
-\]
+```text
+J_e * domega_e_dt =
+    T_e
+  - T_friction
+  - T_accessory
+  - T_coupling_engine_side
+```
 
 During connected operation, engine inertia may be integrated within the coupled
 drivetrain equations or reflected through the gear ratio. The implementation
 must conserve torque and power consistently.
 
-## 7. Fuel Consumption
+## 8. Fuel Consumption
 
 A map-based model is preferred when data are available:
 
-\[
-\dot{m}_f = f(\omega_e, T_e)
-\]
+```text
+fuel_rate = f(omega_e, T_e)
+```
+
+where `fuel_rate` is normally measured in `kg/s`.
 
 The map must define:
 
@@ -163,37 +216,40 @@ If an analytical approximation is used initially, its limitations must be
 documented and sensitivity-tested. Fuel comparisons are not credible if idle,
 engine braking, and low-load efficiency are omitted.
 
-## 8. Coupling Model
+## 9. Coupling Model
 
 The coupling transmits torque according to its capacity and slip:
 
-\[
-\Delta\omega = \omega_e - \omega_\mathrm{sync}
-\]
+```text
+slip_speed = omega_e - omega_sync
+```
 
 An initial controllable model may define transmitted torque as a bounded function
 of commanded capacity, slip speed, and engagement direction:
 
-\[
-|T_c| \leq T_{c,\max}(u_c)
-\]
+```text
+abs(T_c) <= T_c_max(u_c)
+```
+
+where `u_c` is the coupling command and `T_c_max` is the available torque
+capacity after actuator limits.
 
 The instantaneous slip power dissipated in the coupling is:
 
-\[
-P_\mathrm{slip} = |T_c\Delta\omega|
-\]
+```text
+P_slip = abs(T_c * slip_speed)
+```
 
 and accumulated slip energy is:
 
-\[
-E_\mathrm{slip} = \int P_\mathrm{slip}\,dt
-\]
+```text
+E_slip = integral(P_slip, dt)
+```
 
 This energy is a proxy for thermal load and wear. It is not a complete clutch-life
 model.
 
-## 9. Operating Modes
+## 10. Operating Modes
 
 ### Connected
 
@@ -215,11 +271,9 @@ explicit propulsion source. The engine follows idle or another declared policy.
 
 The target speed is:
 
-\[
-\omega_\mathrm{target}
-= \operatorname{clamp}(\omega_\mathrm{sync},
-\omega_\mathrm{idle}, \omega_\mathrm{max})
-\]
+```text
+omega_target = clamp(omega_sync, omega_idle, omega_max)
+```
 
 Engine torque is controlled to reduce speed error while the coupling remains
 open or transmits negligible torque.
@@ -231,7 +285,7 @@ bounds. The controller limits slip energy, acceleration disturbance, and jerk.
 Lock-up is declared only after slip remains below a threshold for a minimum
 duration.
 
-## 10. Drivetrain Losses
+## 11. Drivetrain Losses
 
 Drivetrain losses may be represented by:
 
@@ -244,7 +298,7 @@ Power-flow direction matters. A single constant efficiency applied identically
 in propulsion and overrun can produce incorrect energy behavior. The initial
 model should at least distinguish motoring and back-driving.
 
-## 11. Braking
+## 12. Braking
 
 Foundation brakes provide non-negative braking force up to configured limits.
 When connected, engine braking contributes through the drivetrain. Brake
@@ -260,7 +314,7 @@ The model should track:
 These terms explain why two controllers consume different fuel over the same
 route.
 
-## 12. Re-Engagement Quality
+## 13. Re-Engagement Quality
 
 A re-engagement event should be evaluated using:
 
@@ -276,28 +330,30 @@ A re-engagement event should be evaluated using:
 Jerk may be computed from filtered acceleration to prevent numerical noise from
 dominating the metric. The filter and sample interval must be declared.
 
-## 13. Energy Accounting
+## 14. Energy Accounting
 
 The simulator should maintain an energy balance over each run:
 
-\[
-E_\mathrm{fuel}
-= \Delta E_\mathrm{kinetic}
-+ \Delta E_\mathrm{potential}
-+ E_\mathrm{aero}
-+ E_\mathrm{rolling}
-+ E_\mathrm{brakes}
-+ E_\mathrm{drivetrain\,loss}
-+ E_\mathrm{coupling\,slip}
-+ E_\mathrm{engine\,loss}
-+ E_\mathrm{other}
-+ E_\mathrm{residual}
-\]
+```text
+E_fuel =
+    delta_E_kinetic
+  + delta_E_potential
+  + E_aero
+  + E_rolling
+  + E_brakes
+  + E_drivetrain_loss
+  + E_coupling_slip
+  + E_engine_loss
+  + E_other
+  + E_residual
+```
 
-The exact terms depend on model fidelity. Residual energy should be reported and
-used to detect sign, integration, or double-counting errors.
+For this balance, `E_fuel` should be expressed on a declared energy basis, such
+as lower heating value. The exact terms depend on model fidelity. Residual energy
+should be reported and used to detect sign, integration, or double-counting
+errors.
 
-## 14. Numerical Considerations
+## 15. Numerical Considerations
 
 - Use a solver and time step appropriate for the fastest modeled dynamics.
 - Avoid discontinuous force laws where a smooth physical approximation is
@@ -308,7 +364,7 @@ used to detect sign, integration, or double-counting errors.
 - Test results across multiple time steps.
 - Separate simulation event detection from logging frequency.
 
-## 15. Calibration and Validation Tests
+## 16. Calibration and Validation Tests
 
 The initial plant should pass:
 
@@ -324,7 +380,7 @@ The initial plant should pass:
 9. **Re-engagement:** bounded slip, torque disturbance, and energy.
 10. **Energy balance:** residual below the accepted numerical tolerance.
 
-## 16. Known Limitations of the Initial Model
+## 17. Known Limitations of the Initial Model
 
 - Longitudinal motion only.
 - Simplified tire-road interaction.
