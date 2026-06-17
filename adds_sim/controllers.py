@@ -1,4 +1,4 @@
-"""Deterministic controllers for the Phase 1 simulator."""
+"""Deterministic controllers for ADDS simulator baselines."""
 
 from __future__ import annotations
 
@@ -80,6 +80,77 @@ class SpeedTrackingController(Controller):
 
         brake_force = min(-required_force, observation["max_brake_force"])
         return ControlCommand(engine_torque=0.0, brake_force=brake_force, gear=self.gear)
+
+
+@dataclass(frozen=True)
+class ConventionalBaselineController(SpeedTrackingController):
+    """Conventional connected-drivetrain speed-tracking baseline."""
+
+    name: str = "conventional_baseline"
+
+    def command(self, observation: dict[str, float]) -> ControlCommand:
+        command = super().command(observation)
+        return ControlCommand(
+            engine_torque=command.engine_torque,
+            brake_force=command.brake_force,
+            gear=command.gear,
+            requested_mode="CONNECTED",
+            target_gear=command.gear,
+        )
+
+
+@dataclass(frozen=True)
+class RuleBasedADDSController(SpeedTrackingController):
+    """Transparent rule-based ADDS baseline.
+
+    The policy decouples only during accelerator lift or mild overspeed when no
+    foundation braking is needed, then requests re-engagement when propulsion or
+    braking becomes useful again.
+    """
+
+    proportional_gain: float = 0.2
+    coast_speed_margin: float = 1.5
+    reconnect_speed_margin: float = 0.2
+    name: str = "rule_based_adds"
+
+    def command(self, observation: dict[str, float]) -> ControlCommand:
+        speed_error = observation["target_speed"] - observation["vehicle_speed"]
+        base = super().command(observation)
+        brake_active = base.brake_force > 1e-9
+        propulsion_requested = base.engine_torque is not None and base.engine_torque > 1e-9
+        mode = str(observation["coupling_mode"])
+        speed = observation["vehicle_speed"]
+
+        requested_mode = "CONNECTED"
+        engine_torque = base.engine_torque
+
+        if mode == "CONNECTED":
+            should_coast = (
+                speed > 0.0
+                and speed_error < -self.coast_speed_margin
+                and not brake_active
+            )
+            if should_coast:
+                requested_mode = "DECOUPLING"
+                engine_torque = None
+        elif mode in {"DECOUPLING", "DECOUPLED"}:
+            if brake_active or propulsion_requested or speed_error > self.reconnect_speed_margin:
+                requested_mode = "CONNECTED"
+            else:
+                requested_mode = "DECOUPLED"
+                engine_torque = 0.0
+        elif mode in {"REV_MATCHING", "REENGAGING"}:
+            requested_mode = "CONNECTED"
+        elif mode == "FAULT_SAFE":
+            requested_mode = "CONNECTED"
+
+        return ControlCommand(
+            engine_torque=engine_torque,
+            brake_force=base.brake_force,
+            gear=self.gear,
+            requested_mode=requested_mode,
+            target_gear=self.gear,
+        )
 
 
 @dataclass(frozen=True)

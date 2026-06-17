@@ -95,7 +95,9 @@ constraints remain comparable.
 |-- README.md
 |-- adds_sim
 |   |-- __init__.py
+|   |-- benchmarks.py
 |   |-- cli.py
+|   |-- comparison.py
 |   |-- controllers.py
 |   |-- defaults.py
 |   |-- metrics.py
@@ -118,12 +120,14 @@ constraints remain comparable.
 |-- pyproject.toml
 `-- tests
     |-- test_phase1_acceptance.py
-    `-- test_phase2_state_machine.py
+    |-- test_phase2_state_machine.py
+    `-- test_phase3_baselines.py
 ```
 
 The current implementation covers the initial Phase 1 physical simulator and a
-first Phase 2 drivetrain state machine. Machine learning and optimized ADDS
-policy training are deferred until deterministic baselines are stronger.
+first Phase 2 drivetrain state machine, plus Phase 3 deterministic baselines.
+Machine learning and optimized ADDS policy training are deferred until scenario
+infrastructure and baseline reporting are stronger.
 
 ## Documentation
 
@@ -170,13 +174,15 @@ The Python simulator now provides:
 - Deterministic transition guards for brake-demand blocking, low-speed blocking,
   fault fallback, and re-engagement slip limits.
 - Basic rev-matching and controlled re-engagement behavior.
+- Conventional and transparent rule-based ADDS baseline controllers.
+- A compact benchmark catalog and paired conventional-vs-ADDS comparison helper.
 - Physical logging and summary metrics.
-- Unit tests for the initial Phase 1 and Phase 2 acceptance cases.
+- Unit tests for the initial Phase 1, Phase 2, and Phase 3 acceptance cases.
 
-The current Phase 2 implementation is intentionally simple. It is suitable for
-state-machine verification and early transition studies, not for production
-drivetrain control or real vehicle claims. ML controllers have not been
-implemented yet.
+The current ADDS implementation is intentionally simple. It is suitable for
+state-machine verification, early transition studies, and baseline trade-off
+checks, not for production drivetrain control or real vehicle claims. ML
+controllers have not been implemented yet.
 
 ## Running The Simulator
 
@@ -190,6 +196,32 @@ Run the demo constant-speed scenario:
 
 ```bash
 python3 -m adds_sim.cli
+```
+
+Run a paired benchmark comparison:
+
+```bash
+python3 - <<'PY'
+from adds_sim import *
+
+config = default_simulation_config()
+simulator = LongitudinalSimulator(config)
+
+for scenario in benchmark_scenarios():
+    comparison = run_paired_comparison(
+        simulator,
+        scenario,
+        ConventionalBaselineController(scenario.initial_gear),
+        RuleBasedADDSController(scenario.initial_gear),
+    )
+    print(
+        scenario.scenario_id,
+        "fuel_delta=", round(comparison.deltas["delta_fuel_used"], 8),
+        "relative_fuel_change=", round(comparison.deltas["relative_fuel_change"], 3),
+        "adds_transitions=", comparison.adds_summary["mode_transition_count"],
+        "safety_overrides=", comparison.adds_summary["safety_override_count"],
+    )
+PY
 ```
 
 ## License

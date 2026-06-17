@@ -333,7 +333,7 @@ class LongitudinalSimulator:
         fuel_step = engine_fuel_rate * dt
         fuel_energy_step = fuel_step * self.config.engine.fuel_lower_heating_value
         engine_power = engine_torque * engine_speed
-        engine_loss_step = self._engine_loss_energy_step(engine_power, fuel_energy_step, dt, scenario.drivetrain_connected)
+        engine_loss_step = self._engine_loss_energy_step(engine_power, fuel_energy_step, dt, drivetrain_locked)
         potential_step = self.config.vehicle.mass * self.config.environment.gravity * sin(grade) * distance_step
 
         next_state = VehicleState(

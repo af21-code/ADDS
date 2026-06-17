@@ -1,0 +1,19 @@
+# Python caches and local build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# Virtual environments are kept outside this project because the path contains a colon.
+.venv/
+venv/
+
+# Local OS/editor noise
+.DS_Store
+*.log
+*.tmp
