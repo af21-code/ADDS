@@ -94,9 +94,16 @@ constraints remain comparable.
 .
 |-- README.md
 `-- docs
+    |-- acceptance_tests.md
+    |-- glossary.md
+    |-- metrics.md
     |-- ml_strategy.md
+    |-- open_decisions.md
+    |-- parameter_dictionary.md
     |-- project_idea.md
     |-- roadmap.md
+    |-- scenarios.md
+    |-- signal_dictionary.md
     |-- system_architecture.md
     `-- vehicle_dynamics.md
 ```
@@ -111,6 +118,13 @@ interfaces, and acceptance criteria are sufficiently defined.
 - [System Architecture](docs/system_architecture.md)
 - [Machine Learning Strategy](docs/ml_strategy.md)
 - [Vehicle Dynamics](docs/vehicle_dynamics.md)
+- [Glossary](docs/glossary.md)
+- [Signal Dictionary](docs/signal_dictionary.md)
+- [Parameter Dictionary](docs/parameter_dictionary.md)
+- [Scenario Specification](docs/scenarios.md)
+- [Metric Specification](docs/metrics.md)
+- [Acceptance Tests](docs/acceptance_tests.md)
+- [Open Decisions](docs/open_decisions.md)
 
 ## Guiding Principles
 
