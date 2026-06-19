@@ -1,5 +1,6 @@
 """ADDS Phase 1 longitudinal vehicle simulator."""
 
+from .batch import BatchEvaluationResult, run_batch_evaluation
 from .benchmarks import benchmark_scenarios
 from .comparison import PairedComparisonResult, run_paired_comparison
 from .controllers import (
@@ -22,6 +23,7 @@ from .parameters import (
     VehicleParameters,
 )
 from .profiles import ConstantProfile, PiecewiseLinearProfile
+from .scenario_catalog import ScenarioCatalogEntry, entries_by_split, phase4_scenario_catalog
 from .simulator import LongitudinalSimulator, Scenario, SimulationConfig, SimulationResult, VehicleState
 
 __all__ = [
@@ -30,6 +32,7 @@ __all__ = [
     "ConstantProfile",
     "ConventionalBaselineController",
     "CouplingParameters",
+    "BatchEvaluationResult",
     "EngineParameters",
     "EnvironmentParameters",
     "LongitudinalSimulator",
@@ -37,6 +40,7 @@ __all__ = [
     "PairedComparisonResult",
     "RuleBasedADDSController",
     "Scenario",
+    "ScenarioCatalogEntry",
     "ScriptedModeController",
     "SafetyParameters",
     "SimulationConfig",
@@ -48,6 +52,9 @@ __all__ = [
     "VehicleState",
     "benchmark_scenarios",
     "default_simulation_config",
+    "entries_by_split",
+    "phase4_scenario_catalog",
+    "run_batch_evaluation",
     "run_paired_comparison",
     "summarize_run",
 ]

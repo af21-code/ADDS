@@ -95,14 +95,17 @@ constraints remain comparable.
 |-- README.md
 |-- adds_sim
 |   |-- __init__.py
+|   |-- batch.py
 |   |-- benchmarks.py
 |   |-- cli.py
 |   |-- comparison.py
 |   |-- controllers.py
+|   |-- data.py
 |   |-- defaults.py
 |   |-- metrics.py
 |   |-- parameters.py
 |   |-- profiles.py
+|   |-- scenario_catalog.py
 |   `-- simulator.py
 |-- docs
     |-- acceptance_tests.md
@@ -121,13 +124,15 @@ constraints remain comparable.
 `-- tests
     |-- test_phase1_acceptance.py
     |-- test_phase2_state_machine.py
-    `-- test_phase3_baselines.py
+    |-- test_phase3_baselines.py
+    `-- test_phase4_data_infrastructure.py
 ```
 
 The current implementation covers the initial Phase 1 physical simulator and a
-first Phase 2 drivetrain state machine, plus Phase 3 deterministic baselines.
-Machine learning and optimized ADDS policy training are deferred until scenario
-infrastructure and baseline reporting are stronger.
+first Phase 2 drivetrain state machine, Phase 3 deterministic baselines, and
+Phase 4 scenario/data infrastructure. Machine learning and optimized ADDS policy
+training are deferred until the scenario catalog and exported datasets are
+broader.
 
 ## Documentation
 
@@ -176,32 +181,37 @@ The Python simulator now provides:
 - Basic rev-matching and controlled re-engagement behavior.
 - Conventional and transparent rule-based ADDS baseline controllers.
 - A compact benchmark catalog and paired conventional-vs-ADDS comparison helper.
+- A versioned Phase 4 scenario catalog with train, validation, test, and stress
+  splits.
+- Reproducible batch evaluation with manifest, summary CSV, and trajectory CSV
+  export.
 - Physical logging and summary metrics.
-- Unit tests for the initial Phase 1, Phase 2, and Phase 3 acceptance cases.
+- Unit tests for the initial Phase 1, Phase 2, Phase 3, and Phase 4 acceptance
+  cases.
 
 The current ADDS implementation is intentionally simple. It is suitable for
-state-machine verification, early transition studies, and baseline trade-off
-checks, not for production drivetrain control or real vehicle claims. ML
-controllers have not been implemented yet.
+state-machine verification, early transition studies, baseline trade-off checks,
+and dataset plumbing, not for production drivetrain control or real vehicle
+claims. ML controllers have not been implemented yet.
 
 ## Running The Simulator
 
 Run the acceptance tests:
 
 ```bash
-python3 -m unittest discover -s tests -v
+python3 -B -m unittest discover -s tests -v
 ```
 
 Run the demo constant-speed scenario:
 
 ```bash
-python3 -m adds_sim.cli
+python3 -B -m adds_sim.cli
 ```
 
 Run a paired benchmark comparison:
 
 ```bash
-python3 - <<'PY'
+python3 -B - <<'PY'
 from adds_sim import *
 
 config = default_simulation_config()
@@ -221,6 +231,26 @@ for scenario in benchmark_scenarios():
         "adds_transitions=", comparison.adds_summary["mode_transition_count"],
         "safety_overrides=", comparison.adds_summary["safety_override_count"],
     )
+PY
+```
+
+Run a reproducible Phase 4 batch export:
+
+```bash
+python3 -B - <<'PY'
+from pathlib import Path
+from adds_sim import *
+
+output_dir = Path("/tmp/adds_phase4_batch")
+result = run_batch_evaluation(
+    LongitudinalSimulator(default_simulation_config()),
+    phase4_scenario_catalog(),
+    output_dir,
+)
+
+print("manifest:", result.manifest_path)
+print("summary:", result.summary_path)
+print("trajectories:", len(result.trajectory_paths))
 PY
 ```
 
