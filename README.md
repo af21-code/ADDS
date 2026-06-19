@@ -102,11 +102,14 @@ constraints remain comparable.
 |   |-- controllers.py
 |   |-- data.py
 |   |-- defaults.py
+|   |-- learned_controller.py
 |   |-- metrics.py
+|   |-- ml.py
 |   |-- parameters.py
 |   |-- profiles.py
 |   |-- scenario_catalog.py
-|   `-- simulator.py
+|   |-- simulator.py
+|   `-- train_imitation.py
 |-- docs
     |-- acceptance_tests.md
     |-- glossary.md
@@ -125,14 +128,16 @@ constraints remain comparable.
     |-- test_phase1_acceptance.py
     |-- test_phase2_state_machine.py
     |-- test_phase3_baselines.py
-    `-- test_phase4_data_infrastructure.py
+    |-- test_phase4_data_infrastructure.py
+    `-- test_phase5_imitation_learning.py
 ```
 
 The current implementation covers the initial Phase 1 physical simulator and a
 first Phase 2 drivetrain state machine, Phase 3 deterministic baselines, and
-Phase 4 scenario/data infrastructure. Machine learning and optimized ADDS policy
-training are deferred until the scenario catalog and exported datasets are
-broader.
+Phase 4 scenario/data infrastructure. It also includes a first Phase 5
+behavioral-cloning pipeline for an interpretable learned ADDS controller.
+Advanced ML and optimized ADDS policy training are deferred until the scenario
+catalog and exported datasets are broader.
 
 ## Documentation
 
@@ -185,14 +190,17 @@ The Python simulator now provides:
   splits.
 - Reproducible batch evaluation with manifest, summary CSV, and trajectory CSV
   export.
+- A lightweight imitation-learning pipeline that clones rule-based ADDS
+  thresholds from train-split expert trajectories.
+- JSON checkpoints plus training and evaluation reports for the initial learned
+  controller.
 - Physical logging and summary metrics.
-- Unit tests for the initial Phase 1, Phase 2, Phase 3, and Phase 4 acceptance
-  cases.
+- Unit tests for the initial Phase 1 through Phase 5 acceptance cases.
 
 The current ADDS implementation is intentionally simple. It is suitable for
 state-machine verification, early transition studies, baseline trade-off checks,
-and dataset plumbing, not for production drivetrain control or real vehicle
-claims. ML controllers have not been implemented yet.
+dataset plumbing, and first-pass imitation-learning experiments, not for
+production drivetrain control or real vehicle claims.
 
 ## Running The Simulator
 
@@ -252,6 +260,20 @@ print("manifest:", result.manifest_path)
 print("summary:", result.summary_path)
 print("trajectories:", len(result.trajectory_paths))
 PY
+```
+
+Train the initial imitation-learning controller:
+
+```bash
+python3 -B -m adds_sim.train_imitation /tmp/adds_phase5_imitation
+```
+
+This writes:
+
+```text
+/tmp/adds_phase5_imitation/learned_adds_thresholds.json
+/tmp/adds_phase5_imitation/training_report.json
+/tmp/adds_phase5_imitation/evaluation_report.json
 ```
 
 ## License

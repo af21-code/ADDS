@@ -12,7 +12,15 @@ from .controllers import (
     SpeedTrackingController,
 )
 from .defaults import default_simulation_config
+from .learned_controller import LearnedADDSController
 from .metrics import summarize_run
+from .ml import (
+    BehavioralCloningModel,
+    ImitationExample,
+    TrainingReport,
+    collect_imitation_examples,
+    train_behavioral_cloning_model,
+)
 from .parameters import (
     CouplingParameters,
     EngineParameters,
@@ -33,8 +41,11 @@ __all__ = [
     "ConventionalBaselineController",
     "CouplingParameters",
     "BatchEvaluationResult",
+    "BehavioralCloningModel",
     "EngineParameters",
     "EnvironmentParameters",
+    "ImitationExample",
+    "LearnedADDSController",
     "LongitudinalSimulator",
     "PiecewiseLinearProfile",
     "PairedComparisonResult",
@@ -47,14 +58,17 @@ __all__ = [
     "SimulationResult",
     "SolverParameters",
     "SpeedTrackingController",
+    "TrainingReport",
     "TransmissionParameters",
     "VehicleParameters",
     "VehicleState",
     "benchmark_scenarios",
+    "collect_imitation_examples",
     "default_simulation_config",
     "entries_by_split",
     "phase4_scenario_catalog",
     "run_batch_evaluation",
     "run_paired_comparison",
     "summarize_run",
+    "train_behavioral_cloning_model",
 ]
