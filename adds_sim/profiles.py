@@ -48,3 +48,14 @@ class PiecewiseLinearProfile(ScalarProfile):
                 fraction = (x - x0) / (x1 - x0)
                 return y0 + fraction * (y1 - y0)
         return self.points[-1][1]
+
+
+@dataclass(frozen=True)
+class OffsetProfile(ScalarProfile):
+    """Adds a constant offset to another profile."""
+
+    base: ScalarProfile
+    offset: float
+
+    def value_at(self, x: float) -> float:
+        return self.base.value_at(x) + self.offset
