@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from adds_sim.visualization import MODE_ORDER, available_dashboard_scenarios, build_dashboard_comparison
 
@@ -54,6 +61,30 @@ def _line_chart(df: pd.DataFrame, y: str, title: str, y_title: str):
     return fig
 
 
+def _speed_tracking_chart(df: pd.DataFrame):
+    fig = px.line(
+        df,
+        x="time",
+        y="speed_kmh",
+        color="vehicle",
+        title="Vehicle Speed vs Target",
+        labels={"time": "Time [s]", "speed_kmh": "Speed [km/h]", "vehicle": "Vehicle"},
+    )
+    target = df[df["vehicle"] == "Conventional"]
+    fig.add_trace(
+        go.Scatter(
+            x=target["time"],
+            y=target["target_speed_kmh"],
+            mode="lines",
+            line=dict(color="black", dash="dash", width=2),
+            name="Target speed",
+            hovertemplate="Time=%{x:.2f}s<br>Target=%{y:.2f} km/h<extra></extra>",
+        )
+    )
+    fig.update_layout(legend_title_text="", margin=dict(l=10, r=10, t=50, b=10))
+    return fig
+
+
 def _mode_chart(df: pd.DataFrame):
     adds = df[df["vehicle"] == "ADDS"]
     fig = go.Figure()
@@ -85,13 +116,21 @@ def main() -> None:
         "A research dashboard for comparing a conventional connected drivetrain "
         "against an adaptive drivetrain decoupling strategy on identical scenarios."
     )
+    st.info(
+        "Start with `train_highway_lift_off`: it contains a lift-off/coasting "
+        "opportunity, so ADDS should decouple, coast, rev-match, and re-engage. "
+        "Flat cruise scenarios can look identical because there is no useful "
+        "decoupling opportunity."
+    )
 
     options = _scenario_options()
     option_by_label = {f"{option.scenario_id} ({option.split})": option for option in options}
+    default_label = "train_highway_lift_off (train)"
+    default_index = tuple(option_by_label).index(default_label) if default_label in option_by_label else 0
 
     with st.sidebar:
         st.header("Simulation Setup")
-        selected_label = st.selectbox("Scenario", tuple(option_by_label))
+        selected_label = st.selectbox("Scenario", tuple(option_by_label), index=default_index)
         controller_label = st.radio(
             "ADDS controller",
             ("Rule-based ADDS", "Learned ADDS"),
@@ -99,6 +138,8 @@ def main() -> None:
         )
         controller_kind = "learned" if controller_label == "Learned ADDS" else "rule_based"
         selected = option_by_label[selected_label]
+        if controller_kind == "learned":
+            st.caption("The learned controller is an early conservative clone and may choose not to decouple.")
         st.caption(selected.description)
         st.caption("Tags: " + ", ".join(selected.tags))
 
@@ -106,31 +147,41 @@ def main() -> None:
     df = _records_frame(comparison)
 
     st.subheader("Comparison Summary")
+    st.write(
+        "Negative fuel delta means ADDS used less fuel than the conventional "
+        "baseline for the same scenario. The mode timeline shows when ADDS "
+        "moves through decoupling, coasting, rev-matching, and re-engagement."
+    )
     card_columns = st.columns(4)
     for index, card in enumerate(comparison.metric_cards):
         with card_columns[index % len(card_columns)]:
             st.metric(str(card["label"]), _metric_value(card))
+    if int(comparison.comparison.adds_summary["mode_transition_count"]) == 0:
+        st.warning(
+            "This run has no ADDS mode transitions. In that case the curves can "
+            "look identical because the adaptive drivetrain stayed connected."
+        )
 
     st.subheader("Trajectory Comparison")
     left, right = st.columns(2)
     with left:
-        st.plotly_chart(_line_chart(df, "speed_kmh", "Vehicle Speed", "Speed [km/h]"), use_container_width=True)
+        st.plotly_chart(_speed_tracking_chart(df), width="stretch")
     with right:
-        st.plotly_chart(_line_chart(df, "target_speed_kmh", "Target Speed Reference", "Target speed [km/h]"), use_container_width=True)
+        st.plotly_chart(_line_chart(df, "fuel_used_ml", "Cumulative Fuel Used", "Fuel [ml]"), width="stretch")
 
     left, right = st.columns(2)
     with left:
-        st.plotly_chart(_line_chart(df, "fuel_used_ml", "Cumulative Fuel Used", "Fuel [ml]"), use_container_width=True)
+        st.plotly_chart(_line_chart(df, "engine_speed_rpm", "Engine Speed", "Engine speed [rpm]"), width="stretch")
     with right:
-        st.plotly_chart(_line_chart(df, "engine_speed_rpm", "Engine Speed", "Engine speed [rpm]"), use_container_width=True)
+        st.plotly_chart(_line_chart(df, "synchronous_engine_speed_rpm", "Synchronous Engine Speed", "Engine speed [rpm]"), width="stretch")
 
     left, right = st.columns(2)
     with left:
-        st.plotly_chart(_mode_chart(df), use_container_width=True)
+        st.plotly_chart(_mode_chart(df), width="stretch")
     with right:
         st.plotly_chart(
             _line_chart(df, "coupling_slip_energy", "Coupling Slip Energy", "Energy [J]"),
-            use_container_width=True,
+            width="stretch",
         )
 
     with st.expander("Raw comparison summaries"):
