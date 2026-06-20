@@ -93,6 +93,8 @@ constraints remain comparable.
 ```text
 .
 |-- README.md
+|-- app
+|   `-- streamlit_app.py
 |-- adds_sim
 |   |-- __init__.py
 |   |-- batch.py
@@ -111,7 +113,8 @@ constraints remain comparable.
 |   |-- run_robustness.py
 |   |-- scenario_catalog.py
 |   |-- simulator.py
-|   `-- train_imitation.py
+|   |-- train_imitation.py
+|   `-- visualization.py
 |-- docs
     |-- acceptance_tests.md
     |-- glossary.md
@@ -126,13 +129,15 @@ constraints remain comparable.
     |-- system_architecture.md
     `-- vehicle_dynamics.md
 |-- pyproject.toml
+|-- requirements.txt
 `-- tests
     |-- test_phase1_acceptance.py
     |-- test_phase2_state_machine.py
     |-- test_phase3_baselines.py
     |-- test_phase4_data_infrastructure.py
     |-- test_phase5_imitation_learning.py
-    `-- test_phase6_robustness.py
+    |-- test_phase6_robustness.py
+    `-- test_phase7_visualization.py
 ```
 
 The current implementation covers the initial Phase 1 physical simulator and a
@@ -140,8 +145,10 @@ first Phase 2 drivetrain state machine, Phase 3 deterministic baselines, and
 Phase 4 scenario/data infrastructure. It also includes a first Phase 5
 behavioral-cloning pipeline for an interpretable learned ADDS controller.
 Phase 6 robustness and sensitivity evaluation is available for compact
-uncertainty sweeps. Advanced ML and optimized ADDS policy training are deferred
-until the scenario catalog and exported datasets are broader.
+uncertainty sweeps. A first Phase 7A Streamlit visualization prototype is
+available for reviewing conventional-vs-ADDS scenario comparisons. Advanced ML,
+optimized ADDS policy training, and real-time integration are deferred until the
+scenario catalog and exported datasets are broader.
 
 ## Documentation
 
@@ -202,8 +209,9 @@ The Python simulator now provides:
   tire-friction, and grade perturbations.
 - JSON and CSV robustness reports for sensitivity and constraint-regression
   checks.
+- Dashboard-ready comparison helpers and a Streamlit visualization prototype.
 - Physical logging and summary metrics.
-- Unit tests for the initial Phase 1 through Phase 6 acceptance cases.
+- Unit tests for the initial Phase 1 through Phase 7A acceptance cases.
 
 The current ADDS implementation is intentionally simple. It is suitable for
 state-machine verification, early transition studies, baseline trade-off checks,
@@ -296,6 +304,17 @@ This writes:
 /tmp/adds_phase6_robustness/robustness_report.json
 /tmp/adds_phase6_robustness/robustness_runs.csv
 ```
+
+Run the Phase 7A Streamlit visualization prototype:
+
+```bash
+python3 -m pip install -r requirements.txt
+python3 -m streamlit run app/streamlit_app.py --server.address localhost
+```
+
+The dashboard lets you select a catalog scenario, compare the conventional
+baseline against either the rule-based or learned ADDS controller, and inspect
+speed, fuel, engine-speed, coupling-mode, and slip-energy curves side by side.
 
 ## License
 

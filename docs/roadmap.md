@@ -164,6 +164,40 @@ unverified physical model.
 - Model discrepancies and unsupported operating regions are explicit.
 - The policy fails conservatively under tested out-of-distribution conditions.
 
+## Phase 7A: Visualization Prototype
+
+### Objective
+
+Create a lightweight project-facing interface that makes current simulator
+results inspectable before real-time integration work begins.
+
+### Work Items
+
+- Add dashboard-ready comparison helpers that reuse the existing paired
+  conventional-vs-ADDS evaluation path.
+- Provide an initial Streamlit app for selecting catalog scenarios and ADDS
+  controller variants.
+- Show side-by-side curves for speed tracking, cumulative fuel use, engine
+  speed, coupling mode, and coupling slip energy.
+- Display compact metric cards for fuel delta, RMS speed-error delta,
+  transition count, safety overrides, and constraint regression status.
+- Keep visualization code separate from the simulator core so automated tests do
+  not require launching a web server.
+
+### Deliverables
+
+- Streamlit dashboard prototype.
+- Dashboard data-preparation helpers.
+- Tests for dashboard comparison packaging and metric-card generation.
+
+### Exit Criteria
+
+- Users can run the dashboard locally from the repository root.
+- At least one train, validation, test, and stress scenario can be visualized.
+- The displayed metrics match the paired comparison summaries.
+- The interface clearly states that results are simulation-only research
+  outputs, not real-vehicle claims.
+
 ## Phase 7: Real-Time and Integration Research
 
 This phase is optional and begins only after simulation validity is established.

@@ -43,6 +43,14 @@ from .robustness import (
 )
 from .scenario_catalog import ScenarioCatalogEntry, entries_by_split, phase4_scenario_catalog
 from .simulator import LongitudinalSimulator, Scenario, SimulationConfig, SimulationResult, VehicleState
+from .visualization import (
+    DashboardComparison,
+    DashboardScenarioOption,
+    available_dashboard_scenarios,
+    build_dashboard_comparison,
+    metric_cards_for_dashboard,
+    records_for_dashboard,
+)
 
 __all__ = [
     "CoastController",
@@ -50,6 +58,8 @@ __all__ = [
     "ConstantProfile",
     "ConventionalBaselineController",
     "CouplingParameters",
+    "DashboardComparison",
+    "DashboardScenarioOption",
     "BatchEvaluationResult",
     "BehavioralCloningModel",
     "EngineParameters",
@@ -78,12 +88,16 @@ __all__ = [
     "VehicleState",
     "apply_perturbation_to_config",
     "apply_perturbation_to_scenario",
+    "available_dashboard_scenarios",
     "benchmark_scenarios",
+    "build_dashboard_comparison",
     "collect_imitation_examples",
     "default_simulation_config",
     "default_perturbations",
     "entries_by_split",
+    "metric_cards_for_dashboard",
     "phase4_scenario_catalog",
+    "records_for_dashboard",
     "run_batch_evaluation",
     "run_paired_comparison",
     "run_robustness_evaluation",
