@@ -41,6 +41,8 @@ clearest first demonstration. You should see:
   fair comparison method, and operating modes.
 - Metric cards showing fuel delta, relative fuel change, RMS speed-error delta,
   ADDS transitions, safety overrides, and total fuel values.
+- Decision insight cards explaining whether the selected simulation looks
+  beneficial, neutral, or cautionary for ADDS.
 - A speed chart where Conventional, ADDS, and the target speed are shown
   together.
 - A fuel chart where ADDS should use less fuel in the highway lift-off scenario.

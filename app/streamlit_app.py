@@ -201,6 +201,16 @@ def _render_comparison_tab(comparison, df: pd.DataFrame) -> None:
             "look identical because the adaptive drivetrain stayed connected."
         )
 
+    st.subheader("Decision Insights")
+    for insight in comparison.insights:
+        text = f"**{insight.title}**  \n{insight.message}"
+        if insight.severity == "positive":
+            st.success(text)
+        elif insight.severity == "caution":
+            st.warning(text)
+        else:
+            st.info(text)
+
     st.subheader("Trajectory Comparison")
     left, right = st.columns(2)
     with left:

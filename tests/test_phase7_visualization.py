@@ -5,6 +5,7 @@ from adds_sim.visualization import (
     available_dashboard_scenarios,
     build_dashboard_catalog_summary,
     build_dashboard_comparison,
+    mode_durations_seconds,
 )
 
 
@@ -27,6 +28,7 @@ class Phase7VisualizationTests(unittest.TestCase):
         self.assertEqual(comparison.conventional_records[0]["vehicle"], "Conventional")
         self.assertEqual(comparison.adds_records[0]["vehicle"], "ADDS")
         self.assertIn("relative_fuel_change", comparison.comparison.deltas)
+        self.assertGreater(len(comparison.insights), 0)
 
     def test_records_include_dashboard_units_and_mode_indices(self) -> None:
         comparison = build_dashboard_comparison("test_mild_descent_lower_speed")
@@ -56,6 +58,25 @@ class Phase7VisualizationTests(unittest.TestCase):
         self.assertIn(rows[0].split, {"train", "validation", "test", "stress"})
         self.assertIsInstance(rows[0].fuel_delta_ml, float)
         self.assertIsInstance(rows[0].adds_transitions, int)
+
+    def test_mode_durations_are_estimated_from_records(self) -> None:
+        comparison = build_dashboard_comparison("train_highway_lift_off")
+        durations = mode_durations_seconds(comparison.comparison.adds_result.records)
+
+        self.assertGreater(durations["CONNECTED"], 0.0)
+        self.assertGreater(durations["DECOUPLED"], 0.0)
+        self.assertAlmostEqual(
+            sum(durations.values()),
+            float(comparison.comparison.adds_result.records[-1]["time"]),
+            places=6,
+        )
+
+    def test_insights_classify_demonstration_scenario(self) -> None:
+        comparison = build_dashboard_comparison("train_highway_lift_off")
+        titles = {insight.title for insight in comparison.insights}
+
+        self.assertIn("ADDS reduced simulated fuel use", titles)
+        self.assertIn("ADDS changed drivetrain state", titles)
 
     def test_builds_learned_dashboard_comparison(self) -> None:
         comparison = build_dashboard_comparison("stress_low_speed_urban", "learned")

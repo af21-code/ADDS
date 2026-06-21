@@ -183,6 +183,8 @@ results inspectable before real-time integration work begins.
   speed, coupling mode, and coupling slip energy.
 - Display compact metric cards for fuel delta, RMS speed-error delta,
   transition count, safety overrides, and constraint regression status.
+- Add human-readable decision insights that classify a scenario as beneficial,
+  neutral, or cautionary for the current ADDS policy.
 - Add catalog-level summaries and downloadable CSV/JSON outputs.
 - Keep visualization code separate from the simulator core so automated tests do
   not require launching a web server.

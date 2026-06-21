@@ -46,11 +46,14 @@ from .simulator import LongitudinalSimulator, Scenario, SimulationConfig, Simula
 from .visualization import (
     DashboardCatalogRow,
     DashboardComparison,
+    DashboardInsight,
     DashboardScenarioOption,
     available_dashboard_scenarios,
     build_dashboard_catalog_summary,
     build_dashboard_comparison,
+    insights_for_dashboard,
     metric_cards_for_dashboard,
+    mode_durations_seconds,
     records_for_dashboard,
 )
 
@@ -62,6 +65,7 @@ __all__ = [
     "CouplingParameters",
     "DashboardCatalogRow",
     "DashboardComparison",
+    "DashboardInsight",
     "DashboardScenarioOption",
     "BatchEvaluationResult",
     "BehavioralCloningModel",
@@ -99,7 +103,9 @@ __all__ = [
     "default_simulation_config",
     "default_perturbations",
     "entries_by_split",
+    "insights_for_dashboard",
     "metric_cards_for_dashboard",
+    "mode_durations_seconds",
     "phase4_scenario_catalog",
     "records_for_dashboard",
     "run_batch_evaluation",
