@@ -35,6 +35,10 @@ The dashboard opens on the `train_highway_lift_off` scenario because it is the
 clearest first demonstration. You should see:
 
 - A sidebar with a scenario selector and an ADDS controller selector.
+- Four tabs: project overview, scenario comparison, catalog summary, and
+  downloads.
+- A project overview explaining the conventional baseline, adaptive vehicle,
+  fair comparison method, and operating modes.
 - Metric cards showing fuel delta, relative fuel change, RMS speed-error delta,
   ADDS transitions, safety overrides, and total fuel values.
 - A speed chart where Conventional, ADDS, and the target speed are shown
@@ -45,6 +49,9 @@ clearest first demonstration. You should see:
 - An ADDS coupling-mode timeline showing when the system is connected,
   decoupling, decoupled, rev-matching, and re-engaging.
 - A coupling slip-energy chart for re-engagement diagnostics.
+- A catalog summary table and fuel-change bar chart across all scenarios.
+- Download buttons for the current trajectory CSV, current summary JSON, and
+  full catalog summary CSV.
 
 If you choose `train_constant_speed_cruise`, the curves can look almost
 identical. That is expected: the scenario has no useful coasting opportunity.

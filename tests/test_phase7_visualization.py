@@ -3,6 +3,7 @@ import unittest
 from adds_sim.visualization import (
     MODE_TO_INDEX,
     available_dashboard_scenarios,
+    build_dashboard_catalog_summary,
     build_dashboard_comparison,
 )
 
@@ -45,6 +46,16 @@ class Phase7VisualizationTests(unittest.TestCase):
         self.assertIn("Relative fuel change", labels)
         self.assertIn("RMS speed error delta", labels)
         self.assertIn("ADDS safety overrides", labels)
+
+    def test_catalog_summary_contains_one_row_per_scenario(self) -> None:
+        options = available_dashboard_scenarios()
+        rows = build_dashboard_catalog_summary()
+
+        self.assertEqual(len(rows), len(options))
+        self.assertEqual(rows[0].adds_controller_kind, "rule_based")
+        self.assertIn(rows[0].split, {"train", "validation", "test", "stress"})
+        self.assertIsInstance(rows[0].fuel_delta_ml, float)
+        self.assertIsInstance(rows[0].adds_transitions, int)
 
     def test_builds_learned_dashboard_comparison(self) -> None:
         comparison = build_dashboard_comparison("stress_low_speed_urban", "learned")

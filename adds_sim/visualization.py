@@ -46,6 +46,22 @@ class DashboardComparison:
     metric_cards: tuple[dict[str, float | int | str | bool], ...]
 
 
+@dataclass(frozen=True)
+class DashboardCatalogRow:
+    """One scenario-level row for the dashboard catalog summary."""
+
+    scenario_id: str
+    split: str
+    description: str
+    adds_controller_kind: str
+    fuel_delta_ml: float
+    relative_fuel_change: float
+    rms_speed_error_delta_kmh: float
+    adds_transitions: int
+    adds_safety_overrides: int
+    constraint_regression: bool
+
+
 def available_dashboard_scenarios(
     entries: tuple[ScenarioCatalogEntry, ...] | None = None,
 ) -> tuple[DashboardScenarioOption, ...]:
@@ -106,6 +122,37 @@ def build_dashboard_comparison(
         adds_records=records_for_dashboard(comparison.adds_result, "ADDS"),
         metric_cards=metric_cards_for_dashboard(comparison),
     )
+
+
+def build_dashboard_catalog_summary(
+    adds_controller_kind: str = "rule_based",
+    entries: tuple[ScenarioCatalogEntry, ...] | None = None,
+) -> tuple[DashboardCatalogRow, ...]:
+    """Run all catalog scenarios and return compact dashboard summary rows."""
+
+    catalog = entries or phase4_scenario_catalog()
+    rows: list[DashboardCatalogRow] = []
+    for entry in catalog:
+        comparison = build_dashboard_comparison(
+            scenario_id=entry.scenario.scenario_id,
+            adds_controller_kind=adds_controller_kind,
+            entries=catalog,
+        )
+        rows.append(
+            DashboardCatalogRow(
+                scenario_id=entry.scenario.scenario_id,
+                split=entry.split,
+                description=entry.description,
+                adds_controller_kind=adds_controller_kind,
+                fuel_delta_ml=float(comparison.comparison.deltas["delta_fuel_used"]) * 1_000_000.0,
+                relative_fuel_change=float(comparison.comparison.deltas["relative_fuel_change"]),
+                rms_speed_error_delta_kmh=float(comparison.comparison.deltas["delta_rms_speed_error"]) * 3.6,
+                adds_transitions=int(comparison.comparison.adds_summary["mode_transition_count"]),
+                adds_safety_overrides=int(comparison.comparison.adds_summary["safety_override_count"]),
+                constraint_regression=bool(comparison.comparison.deltas["constraint_regression"]),
+            )
+        )
+    return tuple(rows)
 
 
 def records_for_dashboard(

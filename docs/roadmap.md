@@ -177,10 +177,13 @@ results inspectable before real-time integration work begins.
   conventional-vs-ADDS evaluation path.
 - Provide an initial Streamlit app for selecting catalog scenarios and ADDS
   controller variants.
+- Present the project purpose, operating modes, and simulation-only limitations
+  directly inside the dashboard.
 - Show side-by-side curves for speed tracking, cumulative fuel use, engine
   speed, coupling mode, and coupling slip energy.
 - Display compact metric cards for fuel delta, RMS speed-error delta,
   transition count, safety overrides, and constraint regression status.
+- Add catalog-level summaries and downloadable CSV/JSON outputs.
 - Keep visualization code separate from the simulator core so automated tests do
   not require launching a web server.
 
@@ -188,6 +191,7 @@ results inspectable before real-time integration work begins.
 
 - Streamlit dashboard prototype.
 - Dashboard data-preparation helpers.
+- Project overview, catalog summary, and download panels.
 - Tests for dashboard comparison packaging and metric-card generation.
 
 ### Exit Criteria

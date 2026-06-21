@@ -210,6 +210,8 @@ The Python simulator now provides:
 - JSON and CSV robustness reports for sensitivity and constraint-regression
   checks.
 - Dashboard-ready comparison helpers and a Streamlit visualization prototype.
+- A project-facing dashboard layout with overview, scenario comparison, catalog
+  summary, and result downloads.
 - Physical logging and summary metrics.
 - Unit tests for the initial Phase 1 through Phase 7A acceptance cases.
 
