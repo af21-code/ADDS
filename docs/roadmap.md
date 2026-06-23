@@ -185,6 +185,8 @@ results inspectable before real-time integration work begins.
   transition count, safety overrides, and constraint regression status.
 - Add human-readable decision insights that classify a scenario as beneficial,
   neutral, or cautionary for the current ADDS policy.
+- Add event-level diagnostics for mode durations, transition timing, speed, and
+  slip at each detected ADDS state change.
 - Add catalog-level summaries and downloadable CSV/JSON outputs.
 - Keep visualization code separate from the simulator core so automated tests do
   not require launching a web server.

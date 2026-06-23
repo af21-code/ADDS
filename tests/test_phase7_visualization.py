@@ -5,7 +5,9 @@ from adds_sim.visualization import (
     available_dashboard_scenarios,
     build_dashboard_catalog_summary,
     build_dashboard_comparison,
+    mode_duration_rows,
     mode_durations_seconds,
+    mode_transition_rows,
 )
 
 
@@ -70,6 +72,23 @@ class Phase7VisualizationTests(unittest.TestCase):
             float(comparison.comparison.adds_result.records[-1]["time"]),
             places=6,
         )
+
+    def test_mode_duration_rows_are_ordered_for_dashboard(self) -> None:
+        comparison = build_dashboard_comparison("train_highway_lift_off")
+        rows = mode_duration_rows(comparison.comparison.adds_result.records)
+
+        self.assertEqual([row.mode for row in rows], list(MODE_TO_INDEX))
+        self.assertAlmostEqual(sum(row.duration_percent for row in rows), 100.0, places=6)
+
+    def test_transition_rows_match_adds_transition_count(self) -> None:
+        comparison = build_dashboard_comparison("train_highway_lift_off")
+        rows = mode_transition_rows(comparison.comparison.adds_result.records)
+
+        self.assertEqual(len(rows), comparison.comparison.adds_summary["mode_transition_count"])
+        self.assertEqual(len(rows), len(comparison.mode_transitions))
+        self.assertEqual(rows[0].from_mode, "CONNECTED")
+        self.assertEqual(rows[0].to_mode, "DECOUPLING")
+        self.assertGreater(rows[0].speed_kmh, 0.0)
 
     def test_insights_classify_demonstration_scenario(self) -> None:
         comparison = build_dashboard_comparison("train_highway_lift_off")

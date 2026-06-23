@@ -214,6 +214,8 @@ The Python simulator now provides:
   summary, and result downloads.
 - Automatic dashboard insights that summarize fuel benefit, state transitions,
   speed-tracking impact, and safety signals for the selected scenario.
+- Event-level dashboard diagnostics for ADDS mode durations and transition
+  timing.
 - Physical logging and summary metrics.
 - Unit tests for the initial Phase 1 through Phase 7A acceptance cases.
 

@@ -43,6 +43,8 @@ clearest first demonstration. You should see:
   ADDS transitions, safety overrides, and total fuel values.
 - Decision insight cards explaining whether the selected simulation looks
   beneficial, neutral, or cautionary for ADDS.
+- An ADDS event-analysis section with time spent in each coupling mode and a
+  transition table for decoupling, rev-matching, and re-engagement events.
 - A speed chart where Conventional, ADDS, and the target speed are shown
   together.
 - A fuel chart where ADDS should use less fuel in the highway lift-off scenario.

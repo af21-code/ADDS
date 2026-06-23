@@ -45,6 +45,8 @@ class DashboardComparison:
     adds_records: tuple[dict[str, float | int | str | bool], ...]
     metric_cards: tuple[dict[str, float | int | str | bool], ...]
     insights: tuple["DashboardInsight", ...]
+    mode_durations: tuple["DashboardModeDuration", ...]
+    mode_transitions: tuple["DashboardModeTransition", ...]
 
 
 @dataclass(frozen=True)
@@ -54,6 +56,29 @@ class DashboardInsight:
     severity: str
     title: str
     message: str
+
+
+@dataclass(frozen=True)
+class DashboardModeDuration:
+    """Time spent in one ADDS coupling mode."""
+
+    mode: str
+    duration: float
+    duration_percent: float
+
+
+@dataclass(frozen=True)
+class DashboardModeTransition:
+    """One detected ADDS coupling-mode transition."""
+
+    transition_index: int
+    time: float
+    from_mode: str
+    to_mode: str
+    speed_kmh: float
+    engine_speed_rpm: float
+    coupling_slip_speed: float
+    coupling_slip_energy: float
 
 
 @dataclass(frozen=True)
@@ -132,6 +157,8 @@ def build_dashboard_comparison(
         adds_records=records_for_dashboard(comparison.adds_result, "ADDS"),
         metric_cards=metric_cards_for_dashboard(comparison),
         insights=insights_for_dashboard(comparison),
+        mode_durations=mode_duration_rows(comparison.adds_result.records),
+        mode_transitions=mode_transition_rows(comparison.adds_result.records),
     )
 
 
@@ -374,6 +401,56 @@ def mode_durations_seconds(
         durations[mode] = durations.get(mode, 0.0) + dt
         previous_time = current_time
     return durations
+
+
+def mode_duration_rows(
+    records: tuple[dict[str, float | int | str | bool], ...],
+) -> tuple[DashboardModeDuration, ...]:
+    """Return mode durations as ordered dashboard rows."""
+
+    durations = mode_durations_seconds(records)
+    total_time = sum(durations.values())
+    rows: list[DashboardModeDuration] = []
+    for mode in MODE_ORDER:
+        duration = durations.get(mode, 0.0)
+        rows.append(
+            DashboardModeDuration(
+                mode=mode,
+                duration=duration,
+                duration_percent=100.0 * duration / total_time if total_time > 0.0 else 0.0,
+            )
+        )
+    return tuple(rows)
+
+
+def mode_transition_rows(
+    records: tuple[dict[str, float | int | str | bool], ...],
+) -> tuple[DashboardModeTransition, ...]:
+    """Return detected coupling-mode transitions from sampled ADDS records."""
+
+    if not records:
+        return ()
+
+    transitions: list[DashboardModeTransition] = []
+    previous_mode = str(records[0]["coupling_mode"])
+    for record in records[1:]:
+        current_mode = str(record["coupling_mode"])
+        if current_mode == previous_mode:
+            continue
+        transitions.append(
+            DashboardModeTransition(
+                transition_index=int(record["transition_count"]),
+                time=float(record["time"]),
+                from_mode=previous_mode,
+                to_mode=current_mode,
+                speed_kmh=float(record["vehicle_speed"]) * 3.6,
+                engine_speed_rpm=float(record["engine_speed"]) * 60.0 / (2.0 * 3.141592653589793),
+                coupling_slip_speed=float(record["coupling_slip_speed"]),
+                coupling_slip_energy=float(record["coupling_slip_energy"]),
+            )
+        )
+        previous_mode = current_mode
+    return tuple(transitions)
 
 
 def _find_entry(

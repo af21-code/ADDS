@@ -54,6 +54,14 @@ def _catalog_frame(controller_kind: str) -> pd.DataFrame:
     return pd.DataFrame(asdict(row) for row in _catalog_summary(controller_kind))
 
 
+def _mode_duration_frame(comparison) -> pd.DataFrame:
+    return pd.DataFrame(asdict(row) for row in comparison.mode_durations)
+
+
+def _mode_transition_frame(comparison) -> pd.DataFrame:
+    return pd.DataFrame(asdict(row) for row in comparison.mode_transitions)
+
+
 def _metric_value(card: dict[str, object]) -> str:
     value = card["value"]
     unit = str(card["unit"])
@@ -144,6 +152,19 @@ def _catalog_fuel_chart(summary_df: pd.DataFrame):
     return fig
 
 
+def _mode_duration_chart(mode_duration_df: pd.DataFrame):
+    fig = px.bar(
+        mode_duration_df,
+        x="mode",
+        y="duration",
+        title="ADDS Time Spent By Mode",
+        labels={"mode": "Mode", "duration": "Duration [s]"},
+        category_orders={"mode": list(MODE_ORDER)},
+    )
+    fig.update_layout(margin=dict(l=10, r=10, t=50, b=10), xaxis_tickangle=-30)
+    return fig
+
+
 def _summary_json(comparison) -> str:
     payload = {
         "scenario": comparison.scenario.scenario_id,
@@ -151,6 +172,9 @@ def _summary_json(comparison) -> str:
         "conventional_summary": comparison.comparison.conventional_summary,
         "adds_summary": comparison.comparison.adds_summary,
         "deltas": comparison.comparison.deltas,
+        "insights": [asdict(insight) for insight in comparison.insights],
+        "mode_durations": [asdict(row) for row in comparison.mode_durations],
+        "mode_transitions": [asdict(row) for row in comparison.mode_transitions],
     }
     return json.dumps(payload, indent=2, sort_keys=True)
 
@@ -210,6 +234,39 @@ def _render_comparison_tab(comparison, df: pd.DataFrame) -> None:
             st.warning(text)
         else:
             st.info(text)
+
+    st.subheader("ADDS Event Analysis")
+    mode_duration_df = _mode_duration_frame(comparison)
+    mode_transition_df = _mode_transition_frame(comparison)
+    left, right = st.columns(2)
+    with left:
+        st.plotly_chart(_mode_duration_chart(mode_duration_df), width="stretch")
+    with right:
+        st.dataframe(
+            mode_duration_df,
+            width="stretch",
+            hide_index=True,
+        )
+
+    if mode_transition_df.empty:
+        st.info("No ADDS mode transitions were detected for this run.")
+    else:
+        st.dataframe(
+            mode_transition_df[
+                [
+                    "transition_index",
+                    "time",
+                    "from_mode",
+                    "to_mode",
+                    "speed_kmh",
+                    "engine_speed_rpm",
+                    "coupling_slip_speed",
+                    "coupling_slip_energy",
+                ]
+            ],
+            width="stretch",
+            hide_index=True,
+        )
 
     st.subheader("Trajectory Comparison")
     left, right = st.columns(2)
