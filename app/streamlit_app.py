@@ -172,6 +172,7 @@ def _summary_json(comparison) -> str:
         "conventional_summary": comparison.comparison.conventional_summary,
         "adds_summary": comparison.comparison.adds_summary,
         "deltas": comparison.comparison.deltas,
+        "verdict": asdict(comparison.verdict),
         "insights": [asdict(insight) for insight in comparison.insights],
         "mode_durations": [asdict(row) for row in comparison.mode_durations],
         "mode_transitions": [asdict(row) for row in comparison.mode_transitions],
@@ -214,6 +215,24 @@ def _render_comparison_tab(comparison, df: pd.DataFrame) -> None:
         "Negative fuel delta means ADDS used less fuel than the conventional "
         "baseline for the same scenario. The mode timeline shows when ADDS "
         "moves through decoupling, coasting, rev-matching, and re-engagement."
+    )
+    verdict = comparison.verdict
+    verdict_text = f"**{verdict.title}**  \n" + "  \n".join(
+        f"- {reason}" for reason in verdict.reasons
+    )
+    if verdict.severity == "positive":
+        st.success(verdict_text)
+    elif verdict.severity in {"caution", "negative"}:
+        st.warning(verdict_text)
+    else:
+        st.info(verdict_text)
+    st.caption(
+        "Initial acceptance gates: at least "
+        f"{verdict.thresholds.minimum_fuel_reduction_percent:.1f}% fuel reduction, "
+        "no more than "
+        f"{verdict.thresholds.maximum_rms_speed_error_increase_kmh:.1f} km/h RMS "
+        "speed-error increase, zero constraint regressions, and at most "
+        f"{verdict.thresholds.maximum_safety_overrides} safety overrides."
     )
     card_columns = st.columns(4)
     for index, card in enumerate(comparison.metric_cards):
@@ -310,6 +329,8 @@ def _render_catalog_tab(summary_df: pd.DataFrame) -> None:
                 "adds_transitions",
                 "adds_safety_overrides",
                 "constraint_regression",
+                "verdict_code",
+                "efficiency_claim_accepted",
             ]
         ],
         width="stretch",

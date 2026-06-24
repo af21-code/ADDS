@@ -214,6 +214,8 @@ The Python simulator now provides:
   summary, and result downloads.
 - Automatic dashboard insights that summarize fuel benefit, state transitions,
   speed-tracking impact, and safety signals for the selected scenario.
+- An explicit dashboard research verdict that rejects efficiency claims when
+  mobility or safety comparability gates do not pass.
 - Event-level dashboard diagnostics for ADDS mode durations and transition
   timing.
 - Physical logging and summary metrics.

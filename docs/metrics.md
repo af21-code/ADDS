@@ -136,6 +136,19 @@ Initial thresholds should be conservative placeholders until calibrated:
 Specific numerical thresholds should be declared in experiment configuration and
 revisited after the minimum viable simulator is validated.
 
+The Phase 7A dashboard uses the following explicit initial research gates:
+
+- Simulated fuel reduction must be at least `1%`.
+- RMS speed-error increase must not exceed `1 km/h`.
+- ADDS must introduce no hard-constraint regression.
+- ADDS must log no safety-supervisor override.
+
+Only a result that passes every gate is labeled `ACCEPTABLE_BENEFIT`. A fuel
+reduction accompanied by excessive speed-tracking degradation is labeled
+`TRADE_OFF_REQUIRES_REVIEW`, and the efficiency claim is not accepted. These
+thresholds are conservative visualization and reporting defaults, not validated
+production-vehicle limits.
+
 ## Reporting Requirements
 
 Each report should include:

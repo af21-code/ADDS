@@ -44,9 +44,31 @@ class DashboardComparison:
     conventional_records: tuple[dict[str, float | int | str | bool], ...]
     adds_records: tuple[dict[str, float | int | str | bool], ...]
     metric_cards: tuple[dict[str, float | int | str | bool], ...]
+    verdict: "DashboardVerdict"
     insights: tuple["DashboardInsight", ...]
     mode_durations: tuple["DashboardModeDuration", ...]
     mode_transitions: tuple["DashboardModeTransition", ...]
+
+
+@dataclass(frozen=True)
+class DashboardEvaluationThresholds:
+    """Conservative gates for accepting a simulated efficiency benefit."""
+
+    minimum_fuel_reduction_percent: float = 1.0
+    maximum_rms_speed_error_increase_kmh: float = 1.0
+    maximum_safety_overrides: int = 0
+
+
+@dataclass(frozen=True)
+class DashboardVerdict:
+    """Research-level decision derived from paired-comparison gates."""
+
+    code: str
+    title: str
+    severity: str
+    efficiency_claim_accepted: bool
+    reasons: tuple[str, ...]
+    thresholds: DashboardEvaluationThresholds
 
 
 @dataclass(frozen=True)
@@ -95,6 +117,8 @@ class DashboardCatalogRow:
     adds_transitions: int
     adds_safety_overrides: int
     constraint_regression: bool
+    verdict_code: str
+    efficiency_claim_accepted: bool
 
 
 def available_dashboard_scenarios(
@@ -149,6 +173,7 @@ def build_dashboard_comparison(
         description=entry.description,
         tags=entry.tags,
     )
+    verdict = evaluate_dashboard_comparison(comparison)
     return DashboardComparison(
         scenario=scenario,
         adds_controller_kind=adds_controller_kind,
@@ -156,6 +181,7 @@ def build_dashboard_comparison(
         conventional_records=records_for_dashboard(comparison.conventional_result, "Conventional"),
         adds_records=records_for_dashboard(comparison.adds_result, "ADDS"),
         metric_cards=metric_cards_for_dashboard(comparison),
+        verdict=verdict,
         insights=insights_for_dashboard(comparison),
         mode_durations=mode_duration_rows(comparison.adds_result.records),
         mode_transitions=mode_transition_rows(comparison.adds_result.records),
@@ -176,6 +202,7 @@ def build_dashboard_catalog_summary(
             adds_controller_kind=adds_controller_kind,
             entries=catalog,
         )
+        verdict = comparison.verdict
         rows.append(
             DashboardCatalogRow(
                 scenario_id=entry.scenario.scenario_id,
@@ -188,6 +215,8 @@ def build_dashboard_catalog_summary(
                 adds_transitions=int(comparison.comparison.adds_summary["mode_transition_count"]),
                 adds_safety_overrides=int(comparison.comparison.adds_summary["safety_override_count"]),
                 constraint_regression=bool(comparison.comparison.deltas["constraint_regression"]),
+                verdict_code=verdict.code,
+                efficiency_claim_accepted=verdict.efficiency_claim_accepted,
             )
         )
     return tuple(rows)
@@ -271,6 +300,83 @@ def metric_cards_for_dashboard(
             "unit": "ml",
             "direction": "context",
         },
+    )
+
+
+def evaluate_dashboard_comparison(
+    comparison: PairedComparisonResult,
+    thresholds: DashboardEvaluationThresholds | None = None,
+) -> DashboardVerdict:
+    """Apply explicit comparability gates before accepting an efficiency claim."""
+
+    gates = thresholds or DashboardEvaluationThresholds()
+    relative_fuel_change = float(comparison.deltas["relative_fuel_change"])
+    rms_speed_error_delta_kmh = float(comparison.deltas["delta_rms_speed_error"]) * 3.6
+    safety_overrides = int(comparison.adds_summary["safety_override_count"])
+    constraint_regression = bool(comparison.deltas["constraint_regression"])
+
+    if constraint_regression or safety_overrides > gates.maximum_safety_overrides:
+        reasons: list[str] = []
+        if constraint_regression:
+            reasons.append("ADDS introduced a hard-constraint regression relative to the baseline.")
+        if safety_overrides > gates.maximum_safety_overrides:
+            reasons.append(
+                f"ADDS logged {safety_overrides} safety overrides; the acceptance limit is "
+                f"{gates.maximum_safety_overrides}."
+            )
+        return DashboardVerdict(
+            code="REJECTED_SAFETY",
+            title="Efficiency claim rejected",
+            severity="negative",
+            efficiency_claim_accepted=False,
+            reasons=tuple(reasons),
+            thresholds=gates,
+        )
+
+    speed_is_comparable = rms_speed_error_delta_kmh <= gates.maximum_rms_speed_error_increase_kmh
+    fuel_benefit_is_meaningful = relative_fuel_change <= -gates.minimum_fuel_reduction_percent
+
+    if fuel_benefit_is_meaningful and speed_is_comparable:
+        return DashboardVerdict(
+            code="ACCEPTABLE_BENEFIT",
+            title="Comparable simulated benefit",
+            severity="positive",
+            efficiency_claim_accepted=True,
+            reasons=(
+                f"Fuel use improved by {-relative_fuel_change:.2f}%, meeting the "
+                f"{gates.minimum_fuel_reduction_percent:.2f}% minimum.",
+                f"RMS speed-error increase was {rms_speed_error_delta_kmh:.2f} km/h, within "
+                f"the {gates.maximum_rms_speed_error_increase_kmh:.2f} km/h limit.",
+                "No safety override or hard-constraint regression was recorded.",
+            ),
+            thresholds=gates,
+        )
+
+    if not speed_is_comparable:
+        return DashboardVerdict(
+            code="TRADE_OFF_REQUIRES_REVIEW",
+            title="Trade-off requires review",
+            severity="caution",
+            efficiency_claim_accepted=False,
+            reasons=(
+                f"RMS speed error increased by {rms_speed_error_delta_kmh:.2f} km/h, above "
+                f"the {gates.maximum_rms_speed_error_increase_kmh:.2f} km/h comparability limit.",
+                "Any fuel reduction is therefore not accepted as a comparable efficiency benefit.",
+            ),
+            thresholds=gates,
+        )
+
+    return DashboardVerdict(
+        code="NO_MEANINGFUL_BENEFIT",
+        title="No meaningful simulated benefit",
+        severity="neutral",
+        efficiency_claim_accepted=False,
+        reasons=(
+            f"Fuel change was {relative_fuel_change:.2f}%; acceptance requires at least "
+            f"{gates.minimum_fuel_reduction_percent:.2f}% reduction.",
+            "Mobility and safety gates remained within their initial limits.",
+        ),
+        thresholds=gates,
     )
 
 

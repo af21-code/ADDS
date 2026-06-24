@@ -185,6 +185,8 @@ results inspectable before real-time integration work begins.
   transition count, safety overrides, and constraint regression status.
 - Add human-readable decision insights that classify a scenario as beneficial,
   neutral, or cautionary for the current ADDS policy.
+- Add an explicit research verdict that accepts an efficiency claim only when
+  fuel, mobility, and safety gates all pass.
 - Add event-level diagnostics for mode durations, transition timing, speed, and
   slip at each detected ADDS state change.
 - Add catalog-level summaries and downloadable CSV/JSON outputs.
@@ -197,6 +199,7 @@ results inspectable before real-time integration work begins.
 - Dashboard data-preparation helpers.
 - Project overview, catalog summary, and download panels.
 - Tests for dashboard comparison packaging and metric-card generation.
+- Documented initial acceptance gates and verdict classification tests.
 
 ### Exit Criteria
 

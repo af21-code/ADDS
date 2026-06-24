@@ -5,6 +5,7 @@ from adds_sim.visualization import (
     available_dashboard_scenarios,
     build_dashboard_catalog_summary,
     build_dashboard_comparison,
+    evaluate_dashboard_comparison,
     mode_duration_rows,
     mode_durations_seconds,
     mode_transition_rows,
@@ -31,6 +32,8 @@ class Phase7VisualizationTests(unittest.TestCase):
         self.assertEqual(comparison.adds_records[0]["vehicle"], "ADDS")
         self.assertIn("relative_fuel_change", comparison.comparison.deltas)
         self.assertGreater(len(comparison.insights), 0)
+        self.assertEqual(comparison.verdict.code, "TRADE_OFF_REQUIRES_REVIEW")
+        self.assertFalse(comparison.verdict.efficiency_claim_accepted)
 
     def test_records_include_dashboard_units_and_mode_indices(self) -> None:
         comparison = build_dashboard_comparison("test_mild_descent_lower_speed")
@@ -60,6 +63,22 @@ class Phase7VisualizationTests(unittest.TestCase):
         self.assertIn(rows[0].split, {"train", "validation", "test", "stress"})
         self.assertIsInstance(rows[0].fuel_delta_ml, float)
         self.assertIsInstance(rows[0].adds_transitions, int)
+        self.assertTrue(rows[0].verdict_code)
+        self.assertIsInstance(rows[0].efficiency_claim_accepted, bool)
+
+    def test_verdict_accepts_only_comparable_efficiency_benefits(self) -> None:
+        comparison = build_dashboard_comparison("train_highway_lift_off")
+        verdict = evaluate_dashboard_comparison(comparison.comparison)
+
+        self.assertEqual(verdict.code, "TRADE_OFF_REQUIRES_REVIEW")
+        self.assertFalse(verdict.efficiency_claim_accepted)
+        self.assertTrue(any("speed error" in reason for reason in verdict.reasons))
+
+    def test_verdict_marks_comparable_neutral_result_without_claim(self) -> None:
+        comparison = build_dashboard_comparison("train_constant_speed_cruise")
+
+        self.assertEqual(comparison.verdict.code, "NO_MEANINGFUL_BENEFIT")
+        self.assertFalse(comparison.verdict.efficiency_claim_accepted)
 
     def test_mode_durations_are_estimated_from_records(self) -> None:
         comparison = build_dashboard_comparison("train_highway_lift_off")
