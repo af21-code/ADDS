@@ -74,6 +74,14 @@ AI performance is meaningful only relative to strong baselines:
 
 The learned policy should use the same observation limits as the online baseline.
 
+The current interpretable baseline and behavioral clone use a one-second
+target-speed preview. They estimate the unpowered coast speed from current
+resistance and vehicle mass, then permit decoupling only when the predicted
+speed remains inside a bounded corridor around the preview target. The
+conventional and adaptive controllers use the same proportional speed-tracking
+gain, so a reported benefit cannot come from weakening the ADDS tracking
+objective.
+
 ## 4. Recommended Training Sequence
 
 ### Stage A: Generate Safe Expert Data
@@ -87,6 +95,10 @@ actions and safety-supervisor interventions.
 Train an initial classifier or hierarchical policy to imitate expert mode
 decisions. This produces a stable starting point and exposes ambiguities in the
 observation and action definitions.
+
+The current schema `2.0` clone learns the upper and lower coast-feasibility
+corridor from expert transition samples. It is intentionally small and
+interpretable; it is not yet an optimized ML policy.
 
 ### Stage C: Offline Policy Improvement
 

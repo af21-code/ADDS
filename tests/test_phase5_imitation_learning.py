@@ -36,8 +36,10 @@ class Phase5ImitationLearningTests(unittest.TestCase):
         report = train_behavioral_cloning_model(examples)
 
         self.assertEqual(report.model.model_type, "threshold_behavioral_cloning")
+        self.assertEqual(report.model.schema_version, "2.0")
         self.assertGreater(report.model.training_examples, 0)
         self.assertGreaterEqual(report.model.coast_speed_margin, 0.0)
+        self.assertGreaterEqual(report.model.reconnect_speed_margin, 0.0)
         self.assertIn("CONNECTED", report.label_counts)
 
         with tempfile.TemporaryDirectory() as tmp:

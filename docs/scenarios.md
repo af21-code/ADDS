@@ -174,14 +174,23 @@ Purpose:
 Setup:
 
 - Highway speed.
-- Accelerator lift-off for a defined distance or time.
+- A gradual target reduction that can be followed by natural coast-down rather
+  than mandatory foundation braking.
 - Later reacceleration demand.
 - Mild grade or level road.
+
+The initial catalog implementation uses a level-road target profile of
+`30 m/s` at `0 s`, `26 m/s` at `10 s`, holds `26 m/s` until `14 s`, and returns
+to `30 m/s` at `20 s`. The earlier two-second speed reduction was removed
+because its approximately `-3 m/s^2` target slope represented a braking event,
+not a physically credible highway coasting opportunity.
 
 Expected behavior:
 
 - ADDS may save fuel if coast duration is long enough.
 - The benefit must be compared against idle fuel use and re-engagement costs.
+- The initial nominal result must not be generalized across vehicle resistance,
+  payload, or grade perturbations without rerunning the acceptance gates.
 
 ### S09: Parameter Uncertainty Sweep
 

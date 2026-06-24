@@ -35,7 +35,9 @@ signals use SI units at system boundaries unless otherwise stated.
 | `speed_error` | m/s | `target_speed - vehicle_speed`. |
 | `road_grade` | rad | Current road grade angle, positive uphill. |
 | `road_grade_preview` | rad | Previewed grade samples over a configured horizon. |
-| `target_speed_preview` | m/s | Previewed target-speed samples over a configured horizon. |
+| `target_speed_preview` | m/s | Target speed sampled one second ahead for coast-feasibility decisions. |
+| `target_speed_preview_horizon` | s | Preview horizon associated with `target_speed_preview`; initially `1 s`. |
+| `previous_coupling_mode` | enum | Coupling mode at the start of the integration step. |
 
 ## Driver Demand Signals
 

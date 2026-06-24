@@ -242,6 +242,10 @@ class LongitudinalSimulator:
         gear = state.target_gear if scenario.adds_enabled else scenario.initial_gear
         grade = scenario.grade_profile.value_at(state.position)
         target_speed = scenario.target_speed_profile.value_at(state.time)
+        target_speed_preview_horizon = 1.0
+        target_speed_preview = scenario.target_speed_profile.value_at(
+            min(state.time + target_speed_preview_horizon, scenario.time_limit)
+        )
         total_ratio = self.config.transmission.total_ratio(gear)
         forces = self.resistive_forces(state.speed, grade)
         force_to_hold = forces["aero_force"] + forces["rolling_resistance_force"] + forces["grade_force"]
@@ -263,6 +267,8 @@ class LongitudinalSimulator:
             "coupling_mode": current_mode,
             "mode_time": state.mode_time,
             "target_speed": target_speed,
+            "target_speed_preview": target_speed_preview,
+            "target_speed_preview_horizon": target_speed_preview_horizon,
             "road_grade": grade,
             "force_to_hold_speed": force_to_hold,
             "vehicle_mass": self.config.vehicle.mass,
@@ -270,6 +276,7 @@ class LongitudinalSimulator:
             "total_drive_ratio": total_ratio,
             "transmission_efficiency_motoring": self.config.transmission.efficiency_motoring,
             "max_brake_force": self.config.vehicle.max_brake_force,
+            "minimum_decoupling_speed": self.config.safety.min_vehicle_speed_for_decoupling,
         }
         command = controller.command(observation)
         gear = command.target_gear or command.gear
@@ -375,6 +382,8 @@ class LongitudinalSimulator:
             "vehicle_speed": next_state.speed,
             "vehicle_acceleration": next_state.acceleration,
             "target_speed": target_speed,
+            "target_speed_preview": target_speed_preview,
+            "target_speed_preview_horizon": target_speed_preview_horizon,
             "speed_error": target_speed - next_state.speed,
             "road_grade": grade,
             "wheel_speed": wheel_speed,
@@ -400,6 +409,7 @@ class LongitudinalSimulator:
             "final_drive_ratio": self.config.transmission.final_drive_ratio,
             "total_drive_ratio": total_ratio,
             "synchronous_engine_speed": self.synchronous_engine_speed(next_state.speed, gear),
+            "previous_coupling_mode": current_mode,
             "coupling_mode": mode,
             "coupling_capacity_command": coupling_capacity,
             "coupling_capacity": coupling_capacity,

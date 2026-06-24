@@ -35,8 +35,10 @@ def benchmark_scenarios() -> tuple[Scenario, ...]:
             scenario_id="B02_highway_lift_off",
             initial_speed=30.0,
             initial_gear=5,
-            time_limit=18.0,
-            target_speed_profile=PiecewiseLinearProfile(((0.0, 30.0), (2.0, 24.0), (12.0, 24.0), (18.0, 30.0))),
+            time_limit=20.0,
+            target_speed_profile=PiecewiseLinearProfile(
+                ((0.0, 30.0), (10.0, 26.0), (14.0, 26.0), (20.0, 30.0))
+            ),
             grade_profile=ConstantProfile(0.0),
         ),
         Scenario(

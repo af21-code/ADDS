@@ -103,42 +103,37 @@ class ConventionalBaselineController(SpeedTrackingController):
 class RuleBasedADDSController(SpeedTrackingController):
     """Transparent rule-based ADDS baseline.
 
-    The policy decouples only during accelerator lift or mild overspeed when no
-    foundation braking is needed, then requests re-engagement when propulsion or
-    braking becomes useful again.
+    The policy decouples only when a one-second target preview indicates that
+    unpowered coasting can follow a decreasing speed target within a declared
+    corridor. It reconnects when propulsion, braking, or tighter tracking
+    becomes necessary.
     """
 
-    proportional_gain: float = 0.2
-    coast_speed_margin: float = 1.5
-    reconnect_speed_margin: float = 0.2
+    coast_speed_margin: float = 0.4
+    reconnect_speed_margin: float = 0.1
     name: str = "rule_based_adds"
 
     def command(self, observation: dict[str, float]) -> ControlCommand:
-        speed_error = observation["target_speed"] - observation["vehicle_speed"]
         base = super().command(observation)
-        brake_active = base.brake_force > 1e-9
-        propulsion_requested = base.engine_torque is not None and base.engine_torque > 1e-9
         mode = str(observation["coupling_mode"])
-        speed = observation["vehicle_speed"]
+        coast_is_feasible = self._coast_is_feasible(observation)
 
         requested_mode = "CONNECTED"
         engine_torque = base.engine_torque
+        brake_force = base.brake_force
 
         if mode == "CONNECTED":
-            should_coast = (
-                speed > 0.0
-                and speed_error < -self.coast_speed_margin
-                and not brake_active
-            )
-            if should_coast:
+            if coast_is_feasible:
                 requested_mode = "DECOUPLING"
                 engine_torque = None
+                brake_force = 0.0
         elif mode in {"DECOUPLING", "DECOUPLED"}:
-            if brake_active or propulsion_requested or speed_error > self.reconnect_speed_margin:
-                requested_mode = "CONNECTED"
-            else:
+            if coast_is_feasible:
                 requested_mode = "DECOUPLED"
                 engine_torque = 0.0
+                brake_force = 0.0
+            else:
+                requested_mode = "CONNECTED"
         elif mode in {"REV_MATCHING", "REENGAGING"}:
             requested_mode = "CONNECTED"
         elif mode == "FAULT_SAFE":
@@ -146,10 +141,27 @@ class RuleBasedADDSController(SpeedTrackingController):
 
         return ControlCommand(
             engine_torque=engine_torque,
-            brake_force=base.brake_force,
+            brake_force=brake_force,
             gear=self.gear,
             requested_mode=requested_mode,
             target_gear=self.gear,
+        )
+
+    def _coast_is_feasible(self, observation: dict[str, float]) -> bool:
+        target_speed = observation["target_speed"]
+        target_speed_preview = observation["target_speed_preview"]
+        preview_horizon = observation["target_speed_preview_horizon"]
+        natural_deceleration = max(observation["force_to_hold_speed"], 0.0) / observation["vehicle_mass"]
+        predicted_speed = max(
+            0.0,
+            observation["vehicle_speed"] - natural_deceleration * preview_horizon,
+        )
+        return (
+            observation["vehicle_speed"] >= observation["minimum_decoupling_speed"]
+            and target_speed_preview < target_speed - 1e-9
+            and target_speed_preview - self.reconnect_speed_margin
+            <= predicted_speed
+            <= target_speed_preview + self.coast_speed_margin
         )
 
 

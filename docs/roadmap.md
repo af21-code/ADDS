@@ -87,12 +87,16 @@ unverified physical model.
 - Baseline policy definitions and tuned parameters.
 - Standardized benchmark suite.
 - Initial trade-off curves for efficiency, comfort, and response.
+- Equal speed-tracking gains for paired conventional and ADDS baselines.
+- Preview-based coast-feasibility logic for gradual target-speed reductions.
 
 ### Exit Criteria
 
 - Baselines complete all benchmark scenarios without constraint violations.
 - Results reveal understandable regions where decoupling helps or hurts.
 - The simulator can distinguish controller quality from model artifacts.
+- At least one declared scenario passes the initial fuel, mobility, and safety
+  acceptance gates without relying on degraded speed tracking.
 
 ## Phase 4: Scenario and Data Infrastructure
 

@@ -55,6 +55,21 @@ class Phase6RobustnessTests(unittest.TestCase):
         self.assertEqual(report.constraint_regression_count, 0)
         self.assertGreaterEqual(report.max_relative_fuel_change, report.min_relative_fuel_change)
 
+    def test_nominal_highway_case_retains_comparable_fuel_benefit(self) -> None:
+        highway_entry = next(
+            entry for entry in self.entries if entry.scenario.scenario_id == "train_highway_lift_off"
+        )
+        report = run_robustness_evaluation(
+            entries=(highway_entry,),
+            perturbations=(default_perturbations()[0],),
+        )
+        run = report.runs[0]
+
+        self.assertLessEqual(run.relative_fuel_change, -1.0)
+        self.assertLessEqual(run.delta_rms_speed_error * 3.6, 1.0)
+        self.assertEqual(run.adds_safety_override_count, 0)
+        self.assertEqual(run.adds_mode_transition_count, 5)
+
     def test_writes_json_and_csv_report(self) -> None:
         report = run_robustness_evaluation(entries=self.entries[:1], perturbations=default_perturbations()[:2])
 

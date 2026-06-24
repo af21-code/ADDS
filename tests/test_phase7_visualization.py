@@ -32,8 +32,8 @@ class Phase7VisualizationTests(unittest.TestCase):
         self.assertEqual(comparison.adds_records[0]["vehicle"], "ADDS")
         self.assertIn("relative_fuel_change", comparison.comparison.deltas)
         self.assertGreater(len(comparison.insights), 0)
-        self.assertEqual(comparison.verdict.code, "TRADE_OFF_REQUIRES_REVIEW")
-        self.assertFalse(comparison.verdict.efficiency_claim_accepted)
+        self.assertEqual(comparison.verdict.code, "ACCEPTABLE_BENEFIT")
+        self.assertTrue(comparison.verdict.efficiency_claim_accepted)
 
     def test_records_include_dashboard_units_and_mode_indices(self) -> None:
         comparison = build_dashboard_comparison("test_mild_descent_lower_speed")
@@ -70,9 +70,9 @@ class Phase7VisualizationTests(unittest.TestCase):
         comparison = build_dashboard_comparison("train_highway_lift_off")
         verdict = evaluate_dashboard_comparison(comparison.comparison)
 
-        self.assertEqual(verdict.code, "TRADE_OFF_REQUIRES_REVIEW")
-        self.assertFalse(verdict.efficiency_claim_accepted)
-        self.assertTrue(any("speed error" in reason for reason in verdict.reasons))
+        self.assertEqual(verdict.code, "ACCEPTABLE_BENEFIT")
+        self.assertTrue(verdict.efficiency_claim_accepted)
+        self.assertTrue(any("Fuel use improved" in reason for reason in verdict.reasons))
 
     def test_verdict_marks_comparable_neutral_result_without_claim(self) -> None:
         comparison = build_dashboard_comparison("train_constant_speed_cruise")

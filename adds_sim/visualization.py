@@ -538,8 +538,8 @@ def mode_transition_rows(
         return ()
 
     transitions: list[DashboardModeTransition] = []
-    previous_mode = str(records[0]["coupling_mode"])
-    for record in records[1:]:
+    previous_mode = str(records[0].get("previous_coupling_mode", records[0]["coupling_mode"]))
+    for record in records:
         current_mode = str(record["coupling_mode"])
         if current_mode == previous_mode:
             continue

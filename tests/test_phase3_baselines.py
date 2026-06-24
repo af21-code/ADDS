@@ -69,6 +69,26 @@ class Phase3BaselineTests(unittest.TestCase):
         self.assertIn("relative_fuel_change", comparison.deltas)
         self.assertGreater(comparison.adds_summary["mode_transition_count"], 0)
 
+    def test_rule_based_adds_uses_same_speed_tracking_gain_as_baseline(self) -> None:
+        conventional = ConventionalBaselineController(gear=5)
+        adds = RuleBasedADDSController(gear=5)
+
+        self.assertEqual(adds.proportional_gain, conventional.proportional_gain)
+
+    def test_highway_coasting_benefit_passes_initial_research_gates(self) -> None:
+        scenario = benchmark_scenarios()[1]
+        comparison = run_paired_comparison(
+            self.simulator,
+            scenario,
+            ConventionalBaselineController(gear=scenario.initial_gear),
+            RuleBasedADDSController(gear=scenario.initial_gear),
+        )
+
+        self.assertLessEqual(comparison.deltas["relative_fuel_change"], -1.0)
+        self.assertLessEqual(comparison.deltas["delta_rms_speed_error"] * 3.6, 1.0)
+        self.assertEqual(comparison.adds_summary["mode_transition_count"], 5)
+        self.assertEqual(comparison.adds_summary["safety_override_count"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

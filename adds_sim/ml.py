@@ -21,6 +21,9 @@ class ImitationExample:
     time: float
     vehicle_speed: float
     speed_error: float
+    target_speed: float
+    target_speed_preview: float
+    coast_predicted_speed: float
     road_grade: float
     coupling_mode: str
     requested_mode: str
@@ -70,6 +73,13 @@ def collect_imitation_examples(
         expert = expert_factory(scenario.initial_gear)
         result = simulator.run(scenario, expert)
         for record in result.records:
+            preview_horizon = float(record["target_speed_preview_horizon"])
+            force_to_hold_speed = (
+                float(record["aero_force"])
+                + float(record["rolling_resistance_force"])
+                + float(record["grade_force"])
+            )
+            natural_deceleration = max(force_to_hold_speed, 0.0) / simulator.config.vehicle.mass
             examples.append(
                 ImitationExample(
                     scenario_id=scenario.scenario_id,
@@ -77,6 +87,12 @@ def collect_imitation_examples(
                     time=float(record["time"]),
                     vehicle_speed=float(record["vehicle_speed"]),
                     speed_error=float(record["speed_error"]),
+                    target_speed=float(record["target_speed"]),
+                    target_speed_preview=float(record["target_speed_preview"]),
+                    coast_predicted_speed=max(
+                        0.0,
+                        float(record["vehicle_speed"]) - natural_deceleration * preview_horizon,
+                    ),
                     road_grade=float(record["road_grade"]),
                     coupling_mode=str(record["coupling_mode"]),
                     requested_mode=str(record["requested_mode"]),
@@ -95,27 +111,25 @@ def train_behavioral_cloning_model(examples: tuple[ImitationExample, ...]) -> Tr
     for example in examples:
         label_counts[example.requested_mode] = label_counts.get(example.requested_mode, 0) + 1
 
-    decoupling_errors = [
-        example.speed_error
+    decoupling_examples = [
+        example
         for example in examples
         if example.coupling_mode == "CONNECTED" and example.requested_mode == "DECOUPLING"
     ]
-    reconnect_errors = [
-        example.speed_error
-        for example in examples
-        if example.coupling_mode in {"DECOUPLING", "DECOUPLED"} and example.requested_mode == "CONNECTED"
+    predicted_errors = [
+        example.coast_predicted_speed - example.target_speed_preview
+        for example in decoupling_examples
     ]
-
-    coast_speed_margin = abs(max(decoupling_errors)) if decoupling_errors else 1.5
-    reconnect_speed_margin = min(reconnect_errors) if reconnect_errors else 0.2
+    coast_speed_margin = max(predicted_errors, default=0.4)
+    reconnect_speed_margin = max((-error for error in predicted_errors), default=0.1)
 
     model = BehavioralCloningModel(
         model_type="threshold_behavioral_cloning",
-        schema_version="1.0",
+        schema_version="2.0",
         training_examples=len(examples),
         training_scenarios=tuple(sorted({example.scenario_id for example in examples})),
         coast_speed_margin=max(0.0, coast_speed_margin),
-        reconnect_speed_margin=reconnect_speed_margin,
+        reconnect_speed_margin=max(0.0, reconnect_speed_margin),
         source_controller="rule_based_adds",
     )
     return TrainingReport(model=model, label_counts=label_counts)

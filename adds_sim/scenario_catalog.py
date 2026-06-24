@@ -47,14 +47,16 @@ def phase4_scenario_catalog() -> tuple[ScenarioCatalogEntry, ...]:
                 scenario_id="train_highway_lift_off",
                 initial_speed=30.0,
                 initial_gear=5,
-                time_limit=18.0,
-                target_speed_profile=PiecewiseLinearProfile(((0.0, 30.0), (2.0, 24.0), (12.0, 24.0), (18.0, 30.0))),
+                time_limit=20.0,
+                target_speed_profile=PiecewiseLinearProfile(
+                    ((0.0, 30.0), (10.0, 26.0), (14.0, 26.0), (20.0, 30.0))
+                ),
                 grade_profile=ConstantProfile(0.0),
                 random_seed=1002,
             ),
             split="train",
             version="1.0",
-            description="Highway lift-off and reacceleration scenario with coasting opportunity.",
+            description="Gradual highway lift-off, steady segment, and reacceleration with a feasible coasting opportunity.",
             tags=("highway", "coast", "nominal"),
         ),
         ScenarioCatalogEntry(

@@ -196,6 +196,8 @@ The Python simulator now provides:
   fault fallback, and re-engagement slip limits.
 - Basic rev-matching and controlled re-engagement behavior.
 - Conventional and transparent rule-based ADDS baseline controllers.
+- A one-second target preview and coast-feasibility corridor that preserve equal
+  speed-tracking gains across the conventional and ADDS baselines.
 - A compact benchmark catalog and paired conventional-vs-ADDS comparison helper.
 - A versioned Phase 4 scenario catalog with train, validation, test, and stress
   splits.
