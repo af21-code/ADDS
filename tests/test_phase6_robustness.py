@@ -5,12 +5,16 @@ import unittest
 from pathlib import Path
 
 from adds_sim import (
+    ConventionalBaselineController,
+    LongitudinalSimulator,
     ParameterPerturbation,
+    RuleBasedADDSController,
     apply_perturbation_to_config,
     apply_perturbation_to_scenario,
     default_perturbations,
     default_simulation_config,
     phase4_scenario_catalog,
+    run_paired_comparison,
     run_robustness_evaluation,
     write_robustness_report,
 )
@@ -69,6 +73,28 @@ class Phase6RobustnessTests(unittest.TestCase):
         self.assertLessEqual(run.delta_rms_speed_error * 3.6, 1.0)
         self.assertEqual(run.adds_safety_override_count, 0)
         self.assertEqual(run.adds_mode_transition_count, 5)
+
+    def test_guarded_highway_policy_avoids_fuel_regression_across_envelope(self) -> None:
+        highway_entry = next(
+            entry for entry in self.entries if entry.scenario.scenario_id == "train_highway_lift_off"
+        )
+        accepted = 0
+        for perturbation in default_perturbations():
+            config = apply_perturbation_to_config(self.config, perturbation)
+            scenario = apply_perturbation_to_scenario(highway_entry.scenario, perturbation)
+            comparison = run_paired_comparison(
+                LongitudinalSimulator(config),
+                scenario,
+                ConventionalBaselineController(scenario.initial_gear),
+                RuleBasedADDSController(scenario.initial_gear),
+            )
+            fuel_change = float(comparison.deltas["relative_fuel_change"])
+            rms_delta_kmh = float(comparison.deltas["delta_rms_speed_error"]) * 3.6
+            self.assertLessEqual(fuel_change, 0.0)
+            if fuel_change <= -1.0 and rms_delta_kmh <= 1.0:
+                accepted += 1
+
+        self.assertEqual(accepted, 7)
 
     def test_writes_json_and_csv_report(self) -> None:
         report = run_robustness_evaluation(entries=self.entries[:1], perturbations=default_perturbations()[:2])

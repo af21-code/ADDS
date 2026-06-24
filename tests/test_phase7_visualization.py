@@ -71,10 +71,10 @@ class Phase7VisualizationTests(unittest.TestCase):
         summary = build_dashboard_sensitivity("train_highway_lift_off")
 
         self.assertEqual(summary.total_runs, 8)
-        self.assertEqual(summary.accepted_runs, 3)
-        self.assertAlmostEqual(summary.acceptance_rate_percent, 37.5)
+        self.assertEqual(summary.accepted_runs, 7)
+        self.assertAlmostEqual(summary.acceptance_rate_percent, 87.5)
         self.assertLessEqual(summary.best_relative_fuel_change, -1.0)
-        self.assertGreater(summary.worst_relative_fuel_change, 0.0)
+        self.assertEqual(summary.worst_relative_fuel_change, 0.0)
         self.assertEqual(summary.rows[0].perturbation, "nominal")
         self.assertEqual(summary.rows[0].verdict_code, "ACCEPTABLE_BENEFIT")
 

@@ -191,6 +191,9 @@ Expected behavior:
 - The benefit must be compared against idle fuel use and re-engagement costs.
 - The initial nominal result must not be generalized across vehicle resistance,
   payload, or grade perturbations without rerunning the acceptance gates.
+- The current guarded baseline suppresses marginal coast entries when the
+  one-second target reduction is below `0.25 m/s` or positive grade exceeds
+  approximately `0.5%`.
 
 ### S09: Parameter Uncertainty Sweep
 

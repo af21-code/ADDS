@@ -82,6 +82,14 @@ conventional and adaptive controllers use the same proportional speed-tracking
 gain, so a reported benefit cannot come from weakening the ADDS tracking
 objective.
 
+Two deterministic guards wrap both the rule-based and learned decisions:
+the one-second preview must decrease by at least `0.25 m/s`, and road grade must
+not exceed `0.005 rad` (approximately `0.5%`) during coast entry. The first
+guard prevents short late-cycle events whose transition overhead outweighs
+their benefit. The second keeps the system connected where positive grade makes
+unpowered coasting unattractive. These are initial research thresholds rather
+than calibrated production values.
+
 ## 4. Recommended Training Sequence
 
 ### Stage A: Generate Safe Expert Data

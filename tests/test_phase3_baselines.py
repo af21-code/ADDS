@@ -74,6 +74,8 @@ class Phase3BaselineTests(unittest.TestCase):
         adds = RuleBasedADDSController(gear=5)
 
         self.assertEqual(adds.proportional_gain, conventional.proportional_gain)
+        self.assertGreater(adds.minimum_target_speed_drop, 0.0)
+        self.assertGreaterEqual(adds.maximum_coast_grade, 0.0)
 
     def test_highway_coasting_benefit_passes_initial_research_gates(self) -> None:
         scenario = benchmark_scenarios()[1]

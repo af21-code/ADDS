@@ -198,6 +198,8 @@ The Python simulator now provides:
 - Conventional and transparent rule-based ADDS baseline controllers.
 - A one-second target preview and coast-feasibility corridor that preserve equal
   speed-tracking gains across the conventional and ADDS baselines.
+- Conservative guards against marginal target changes and uphill coast entries
+  that would make transition overhead or idle fuel unattractive.
 - A compact benchmark catalog and paired conventional-vs-ADDS comparison helper.
 - A versioned Phase 4 scenario catalog with train, validation, test, and stress
   splits.

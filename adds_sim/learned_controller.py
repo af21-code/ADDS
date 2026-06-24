@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .controllers import ControlCommand, SpeedTrackingController
+from .controllers import ControlCommand, SpeedTrackingController, coast_is_feasible
 from .ml import BehavioralCloningModel
 
 
@@ -13,6 +13,8 @@ class LearnedADDSController(SpeedTrackingController):
     """Behavioral-cloning ADDS controller using a saved threshold model."""
 
     model: BehavioralCloningModel | None = None
+    minimum_target_speed_drop: float = 0.25
+    maximum_coast_grade: float = 0.005
     name: str = "learned_adds"
 
     def command(self, observation: dict[str, float]) -> ControlCommand:
@@ -21,20 +23,12 @@ class LearnedADDSController(SpeedTrackingController):
 
         base = super().command(observation)
         mode = str(observation["coupling_mode"])
-        target_speed = observation["target_speed"]
-        target_speed_preview = observation["target_speed_preview"]
-        preview_horizon = observation["target_speed_preview_horizon"]
-        natural_deceleration = max(observation["force_to_hold_speed"], 0.0) / observation["vehicle_mass"]
-        predicted_speed = max(
-            0.0,
-            observation["vehicle_speed"] - natural_deceleration * preview_horizon,
-        )
-        coast_is_feasible = (
-            observation["vehicle_speed"] >= observation["minimum_decoupling_speed"]
-            and target_speed_preview < target_speed - 1e-9
-            and target_speed_preview - self.model.reconnect_speed_margin
-            <= predicted_speed
-            <= target_speed_preview + self.model.coast_speed_margin
+        coast_feasible = coast_is_feasible(
+            observation=observation,
+            coast_speed_margin=self.model.coast_speed_margin,
+            reconnect_speed_margin=self.model.reconnect_speed_margin,
+            minimum_target_speed_drop=self.minimum_target_speed_drop,
+            maximum_coast_grade=self.maximum_coast_grade,
         )
 
         requested_mode = "CONNECTED"
@@ -42,12 +36,12 @@ class LearnedADDSController(SpeedTrackingController):
         brake_force = base.brake_force
 
         if mode == "CONNECTED":
-            if coast_is_feasible:
+            if coast_feasible:
                 requested_mode = "DECOUPLING"
                 engine_torque = None
                 brake_force = 0.0
         elif mode in {"DECOUPLING", "DECOUPLED"}:
-            if coast_is_feasible:
+            if coast_feasible:
                 requested_mode = "DECOUPLED"
                 engine_torque = 0.0
                 brake_force = 0.0

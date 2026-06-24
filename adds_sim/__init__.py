@@ -10,6 +10,7 @@ from .controllers import (
     RuleBasedADDSController,
     ScriptedModeController,
     SpeedTrackingController,
+    coast_is_feasible,
 )
 from .defaults import default_simulation_config
 from .learned_controller import LearnedADDSController
@@ -117,6 +118,7 @@ __all__ = [
     "build_dashboard_comparison",
     "build_dashboard_sensitivity",
     "collect_imitation_examples",
+    "coast_is_feasible",
     "default_simulation_config",
     "default_perturbations",
     "entries_by_split",

@@ -99,6 +99,33 @@ class ConventionalBaselineController(SpeedTrackingController):
         )
 
 
+def coast_is_feasible(
+    observation: dict[str, float],
+    coast_speed_margin: float,
+    reconnect_speed_margin: float,
+    minimum_target_speed_drop: float,
+    maximum_coast_grade: float,
+) -> bool:
+    """Return whether previewed unpowered coasting remains inside policy guards."""
+
+    target_speed = observation["target_speed"]
+    target_speed_preview = observation["target_speed_preview"]
+    preview_horizon = observation["target_speed_preview_horizon"]
+    natural_deceleration = max(observation["force_to_hold_speed"], 0.0) / observation["vehicle_mass"]
+    predicted_speed = max(
+        0.0,
+        observation["vehicle_speed"] - natural_deceleration * preview_horizon,
+    )
+    return (
+        observation["vehicle_speed"] >= observation["minimum_decoupling_speed"]
+        and target_speed - target_speed_preview >= minimum_target_speed_drop
+        and observation["road_grade"] <= maximum_coast_grade
+        and target_speed_preview - reconnect_speed_margin
+        <= predicted_speed
+        <= target_speed_preview + coast_speed_margin
+    )
+
+
 @dataclass(frozen=True)
 class RuleBasedADDSController(SpeedTrackingController):
     """Transparent rule-based ADDS baseline.
@@ -111,6 +138,8 @@ class RuleBasedADDSController(SpeedTrackingController):
 
     coast_speed_margin: float = 0.4
     reconnect_speed_margin: float = 0.1
+    minimum_target_speed_drop: float = 0.25
+    maximum_coast_grade: float = 0.005
     name: str = "rule_based_adds"
 
     def command(self, observation: dict[str, float]) -> ControlCommand:
@@ -148,20 +177,12 @@ class RuleBasedADDSController(SpeedTrackingController):
         )
 
     def _coast_is_feasible(self, observation: dict[str, float]) -> bool:
-        target_speed = observation["target_speed"]
-        target_speed_preview = observation["target_speed_preview"]
-        preview_horizon = observation["target_speed_preview_horizon"]
-        natural_deceleration = max(observation["force_to_hold_speed"], 0.0) / observation["vehicle_mass"]
-        predicted_speed = max(
-            0.0,
-            observation["vehicle_speed"] - natural_deceleration * preview_horizon,
-        )
-        return (
-            observation["vehicle_speed"] >= observation["minimum_decoupling_speed"]
-            and target_speed_preview < target_speed - 1e-9
-            and target_speed_preview - self.reconnect_speed_margin
-            <= predicted_speed
-            <= target_speed_preview + self.coast_speed_margin
+        return coast_is_feasible(
+            observation=observation,
+            coast_speed_margin=self.coast_speed_margin,
+            reconnect_speed_margin=self.reconnect_speed_margin,
+            minimum_target_speed_drop=self.minimum_target_speed_drop,
+            maximum_coast_grade=self.maximum_coast_grade,
         )
 
 
