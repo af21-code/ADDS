@@ -220,6 +220,8 @@ The Python simulator now provides:
   mobility or safety comparability gates do not pass.
 - Event-level dashboard diagnostics for ADDS mode durations and transition
   timing.
+- Dashboard robustness envelopes for payload, resistance, grip, and grade
+  perturbations, with per-run research verdicts.
 - Physical logging and summary metrics.
 - Unit tests for the initial Phase 1 through Phase 7A acceptance cases.
 

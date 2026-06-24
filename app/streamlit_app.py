@@ -21,6 +21,7 @@ from adds_sim.visualization import (
     available_dashboard_scenarios,
     build_dashboard_catalog_summary,
     build_dashboard_comparison,
+    build_dashboard_sensitivity,
 )
 
 
@@ -46,6 +47,11 @@ def _catalog_summary(controller_kind: str):
     return build_dashboard_catalog_summary(controller_kind)
 
 
+@st.cache_data(show_spinner=True)
+def _sensitivity_summary(scenario_id: str, controller_kind: str):
+    return build_dashboard_sensitivity(scenario_id, controller_kind)
+
+
 def _records_frame(comparison) -> pd.DataFrame:
     return pd.DataFrame((*comparison.conventional_records, *comparison.adds_records))
 
@@ -60,6 +66,10 @@ def _mode_duration_frame(comparison) -> pd.DataFrame:
 
 def _mode_transition_frame(comparison) -> pd.DataFrame:
     return pd.DataFrame(asdict(row) for row in comparison.mode_transitions)
+
+
+def _sensitivity_frame(sensitivity) -> pd.DataFrame:
+    return pd.DataFrame(asdict(row) for row in sensitivity.rows)
 
 
 def _metric_value(card: dict[str, object]) -> str:
@@ -162,6 +172,61 @@ def _mode_duration_chart(mode_duration_df: pd.DataFrame):
         category_orders={"mode": list(MODE_ORDER)},
     )
     fig.update_layout(margin=dict(l=10, r=10, t=50, b=10), xaxis_tickangle=-30)
+    return fig
+
+
+def _sensitivity_fuel_chart(sensitivity_df: pd.DataFrame):
+    fig = px.bar(
+        sensitivity_df,
+        x="perturbation",
+        y="relative_fuel_change",
+        color="verdict_code",
+        title="Fuel Sensitivity Across Parameter Perturbations",
+        labels={
+            "perturbation": "Perturbation",
+            "relative_fuel_change": "Relative fuel change [%]",
+            "verdict_code": "Research verdict",
+        },
+        color_discrete_map={
+            "ACCEPTABLE_BENEFIT": "#2e8b57",
+            "NO_MEANINGFUL_BENEFIT": "#6c757d",
+            "TRADE_OFF_REQUIRES_REVIEW": "#d99000",
+            "REJECTED_SAFETY": "#b22222",
+        },
+    )
+    fig.add_hline(y=-1.0, line_dash="dash", line_color="green")
+    fig.add_hline(y=0.0, line_dash="dot", line_color="black")
+    fig.update_layout(margin=dict(l=10, r=10, t=50, b=10), xaxis_tickangle=-30)
+    return fig
+
+
+def _sensitivity_tradeoff_chart(sensitivity_df: pd.DataFrame):
+    fig = px.scatter(
+        sensitivity_df,
+        x="rms_speed_error_delta_kmh",
+        y="relative_fuel_change",
+        color="verdict_code",
+        text="perturbation",
+        size="adds_transitions",
+        size_max=20,
+        title="Fuel and Speed-Tracking Trade-off",
+        labels={
+            "rms_speed_error_delta_kmh": "RMS speed-error delta [km/h]",
+            "relative_fuel_change": "Relative fuel change [%]",
+            "verdict_code": "Research verdict",
+            "adds_transitions": "ADDS transitions",
+        },
+        color_discrete_map={
+            "ACCEPTABLE_BENEFIT": "#2e8b57",
+            "NO_MEANINGFUL_BENEFIT": "#6c757d",
+            "TRADE_OFF_REQUIRES_REVIEW": "#d99000",
+            "REJECTED_SAFETY": "#b22222",
+        },
+    )
+    fig.add_hline(y=-1.0, line_dash="dash", line_color="green")
+    fig.add_vline(x=1.0, line_dash="dash", line_color="orange")
+    fig.update_traces(textposition="top center")
+    fig.update_layout(margin=dict(l=10, r=10, t=50, b=10))
     return fig
 
 
@@ -338,7 +403,69 @@ def _render_catalog_tab(summary_df: pd.DataFrame) -> None:
     )
 
 
-def _render_downloads_tab(comparison, df: pd.DataFrame, summary_df: pd.DataFrame) -> None:
+def _render_robustness_tab(sensitivity, sensitivity_df: pd.DataFrame) -> None:
+    st.subheader("Robustness And Sensitivity")
+    st.write(
+        "The selected scenario is repeated under deterministic changes to payload, "
+        "aerodynamic drag, rolling resistance, tire grip, and road grade. A nominal "
+        "benefit is robust only where the same fuel, mobility, and safety gates pass."
+    )
+    metric_columns = st.columns(4)
+    with metric_columns[0]:
+        st.metric(
+            "Accepted perturbations",
+            f"{sensitivity.accepted_runs}/{sensitivity.total_runs}",
+        )
+    with metric_columns[1]:
+        st.metric("Acceptance rate", f"{sensitivity.acceptance_rate_percent:.1f} %")
+    with metric_columns[2]:
+        st.metric("Best fuel change", f"{sensitivity.best_relative_fuel_change:.3f} %")
+    with metric_columns[3]:
+        st.metric("Worst fuel change", f"{sensitivity.worst_relative_fuel_change:.3f} %")
+
+    if sensitivity.accepted_runs == sensitivity.total_runs:
+        st.success("The current simulated benefit passes all initial gates across the tested envelope.")
+    elif sensitivity.accepted_runs > 0:
+        st.warning(
+            "The simulated benefit is condition-dependent. Review the rejected "
+            "perturbations before generalizing the nominal result."
+        )
+    else:
+        st.warning("No tested perturbation passes every initial research gate.")
+
+    left, right = st.columns(2)
+    with left:
+        st.plotly_chart(_sensitivity_fuel_chart(sensitivity_df), width="stretch")
+    with right:
+        st.plotly_chart(_sensitivity_tradeoff_chart(sensitivity_df), width="stretch")
+
+    st.dataframe(
+        sensitivity_df[
+            [
+                "perturbation",
+                "mass_scale",
+                "drag_scale",
+                "rolling_resistance_scale",
+                "tire_friction_scale",
+                "grade_offset_percent",
+                "relative_fuel_change",
+                "rms_speed_error_delta_kmh",
+                "adds_transitions",
+                "verdict_code",
+                "efficiency_claim_accepted",
+            ]
+        ],
+        width="stretch",
+        hide_index=True,
+    )
+
+
+def _render_downloads_tab(
+    comparison,
+    df: pd.DataFrame,
+    summary_df: pd.DataFrame,
+    sensitivity_df: pd.DataFrame,
+) -> None:
     st.subheader("Downloads")
     st.write("Export the current comparison or the full catalog summary for offline review.")
     st.download_button(
@@ -357,6 +484,15 @@ def _render_downloads_tab(comparison, df: pd.DataFrame, summary_df: pd.DataFrame
         label="Download catalog summary CSV",
         data=summary_df.to_csv(index=False),
         file_name=f"adds_catalog_{comparison.adds_controller_kind}_summary.csv",
+        mime="text/csv",
+    )
+    st.download_button(
+        label="Download selected sensitivity CSV",
+        data=sensitivity_df.to_csv(index=False),
+        file_name=(
+            f"{comparison.scenario.scenario_id}_"
+            f"{comparison.adds_controller_kind}_sensitivity.csv"
+        ),
         mime="text/csv",
     )
     with st.expander("Raw comparison summaries"):
@@ -399,9 +535,17 @@ def main() -> None:
     comparison = _comparison(selected.scenario_id, controller_kind)
     df = _records_frame(comparison)
     summary_df = _catalog_frame(controller_kind)
+    sensitivity = _sensitivity_summary(selected.scenario_id, controller_kind)
+    sensitivity_df = _sensitivity_frame(sensitivity)
 
-    overview_tab, comparison_tab, catalog_tab, downloads_tab = st.tabs(
-        ("Project Overview", "Scenario Comparison", "Catalog Summary", "Downloads")
+    overview_tab, comparison_tab, catalog_tab, robustness_tab, downloads_tab = st.tabs(
+        (
+            "Project Overview",
+            "Scenario Comparison",
+            "Catalog Summary",
+            "Robustness",
+            "Downloads",
+        )
     )
     with overview_tab:
         _render_project_overview()
@@ -409,8 +553,10 @@ def main() -> None:
         _render_comparison_tab(comparison, df)
     with catalog_tab:
         _render_catalog_tab(summary_df)
+    with robustness_tab:
+        _render_robustness_tab(sensitivity, sensitivity_df)
     with downloads_tab:
-        _render_downloads_tab(comparison, df, summary_df)
+        _render_downloads_tab(comparison, df, summary_df, sensitivity_df)
 
     st.caption(
         "This prototype is for research visualization only. Simulation results "

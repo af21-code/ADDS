@@ -194,6 +194,8 @@ results inspectable before real-time integration work begins.
 - Add event-level diagnostics for mode durations, transition timing, speed, and
   slip at each detected ADDS state change.
 - Add catalog-level summaries and downloadable CSV/JSON outputs.
+- Add scenario-level robustness envelopes with per-perturbation verdicts,
+  acceptance rates, trade-off plots, and CSV export.
 - Keep visualization code separate from the simulator core so automated tests do
   not require launching a web server.
 
@@ -204,6 +206,7 @@ results inspectable before real-time integration work begins.
 - Project overview, catalog summary, and download panels.
 - Tests for dashboard comparison packaging and metric-card generation.
 - Documented initial acceptance gates and verdict classification tests.
+- Interactive sensitivity view for the deterministic uncertainty envelope.
 
 ### Exit Criteria
 

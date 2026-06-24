@@ -5,6 +5,7 @@ from adds_sim.visualization import (
     available_dashboard_scenarios,
     build_dashboard_catalog_summary,
     build_dashboard_comparison,
+    build_dashboard_sensitivity,
     evaluate_dashboard_comparison,
     mode_duration_rows,
     mode_durations_seconds,
@@ -65,6 +66,24 @@ class Phase7VisualizationTests(unittest.TestCase):
         self.assertIsInstance(rows[0].adds_transitions, int)
         self.assertTrue(rows[0].verdict_code)
         self.assertIsInstance(rows[0].efficiency_claim_accepted, bool)
+
+    def test_sensitivity_summary_applies_verdicts_across_perturbations(self) -> None:
+        summary = build_dashboard_sensitivity("train_highway_lift_off")
+
+        self.assertEqual(summary.total_runs, 8)
+        self.assertEqual(summary.accepted_runs, 3)
+        self.assertAlmostEqual(summary.acceptance_rate_percent, 37.5)
+        self.assertLessEqual(summary.best_relative_fuel_change, -1.0)
+        self.assertGreater(summary.worst_relative_fuel_change, 0.0)
+        self.assertEqual(summary.rows[0].perturbation, "nominal")
+        self.assertEqual(summary.rows[0].verdict_code, "ACCEPTABLE_BENEFIT")
+
+    def test_learned_sensitivity_uses_same_uncertainty_envelope(self) -> None:
+        summary = build_dashboard_sensitivity("train_highway_lift_off", "learned")
+
+        self.assertEqual(summary.adds_controller_kind, "learned")
+        self.assertEqual(summary.total_runs, 8)
+        self.assertTrue(any(row.efficiency_claim_accepted for row in summary.rows))
 
     def test_verdict_accepts_only_comparable_efficiency_benefits(self) -> None:
         comparison = build_dashboard_comparison("train_highway_lift_off")

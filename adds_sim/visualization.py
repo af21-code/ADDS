@@ -9,6 +9,11 @@ from .controllers import ConventionalBaselineController, RuleBasedADDSController
 from .defaults import default_simulation_config
 from .learned_controller import LearnedADDSController
 from .ml import collect_imitation_examples, train_behavioral_cloning_model
+from .robustness import (
+    apply_perturbation_to_config,
+    apply_perturbation_to_scenario,
+    default_perturbations,
+)
 from .scenario_catalog import ScenarioCatalogEntry, phase4_scenario_catalog
 from .simulator import LongitudinalSimulator, SimulationResult
 
@@ -121,6 +126,40 @@ class DashboardCatalogRow:
     efficiency_claim_accepted: bool
 
 
+@dataclass(frozen=True)
+class DashboardSensitivityRow:
+    """One dashboard-ready scenario result under a parameter perturbation."""
+
+    perturbation: str
+    mass_scale: float
+    drag_scale: float
+    rolling_resistance_scale: float
+    tire_friction_scale: float
+    grade_offset_percent: float
+    relative_fuel_change: float
+    rms_speed_error_delta_kmh: float
+    adds_transitions: int
+    adds_safety_overrides: int
+    constraint_regression: bool
+    verdict_code: str
+    efficiency_claim_accepted: bool
+
+
+@dataclass(frozen=True)
+class DashboardSensitivitySummary:
+    """Sensitivity envelope for one scenario and ADDS controller."""
+
+    scenario_id: str
+    adds_controller_kind: str
+    accepted_runs: int
+    total_runs: int
+    acceptance_rate_percent: float
+    best_relative_fuel_change: float
+    worst_relative_fuel_change: float
+    maximum_rms_speed_error_delta_kmh: float
+    rows: tuple[DashboardSensitivityRow, ...]
+
+
 def available_dashboard_scenarios(
     entries: tuple[ScenarioCatalogEntry, ...] | None = None,
 ) -> tuple[DashboardScenarioOption, ...]:
@@ -220,6 +259,80 @@ def build_dashboard_catalog_summary(
             )
         )
     return tuple(rows)
+
+
+def build_dashboard_sensitivity(
+    scenario_id: str,
+    adds_controller_kind: str = "rule_based",
+    entries: tuple[ScenarioCatalogEntry, ...] | None = None,
+) -> DashboardSensitivitySummary:
+    """Evaluate one scenario across the default deterministic uncertainty envelope."""
+
+    catalog = entries or phase4_scenario_catalog()
+    entry = _find_entry(catalog, scenario_id)
+    base_config = default_simulation_config()
+    learned_model = None
+    if adds_controller_kind == "learned":
+        training_entries = tuple(item for item in catalog if item.split == "train")
+        training_simulator = LongitudinalSimulator(base_config)
+        examples = collect_imitation_examples(training_simulator, training_entries)
+        learned_model = train_behavioral_cloning_model(examples).model
+    elif adds_controller_kind != "rule_based":
+        raise ValueError(f"unknown adds_controller_kind: {adds_controller_kind}")
+
+    rows: list[DashboardSensitivityRow] = []
+    for perturbation in default_perturbations():
+        config = apply_perturbation_to_config(base_config, perturbation)
+        scenario = apply_perturbation_to_scenario(entry.scenario, perturbation)
+        simulator = LongitudinalSimulator(config)
+        conventional_controller = ConventionalBaselineController(scenario.initial_gear)
+        if adds_controller_kind == "rule_based":
+            adds_controller = RuleBasedADDSController(scenario.initial_gear)
+        else:
+            adds_controller = LearnedADDSController(
+                gear=scenario.initial_gear,
+                model=learned_model,
+            )
+        comparison = run_paired_comparison(
+            simulator=simulator,
+            scenario=scenario,
+            conventional_controller=conventional_controller,
+            adds_controller=adds_controller,
+        )
+        verdict = evaluate_dashboard_comparison(comparison)
+        rows.append(
+            DashboardSensitivityRow(
+                perturbation=perturbation.name,
+                mass_scale=perturbation.mass_scale,
+                drag_scale=perturbation.drag_scale,
+                rolling_resistance_scale=perturbation.rolling_resistance_scale,
+                tire_friction_scale=perturbation.tire_friction_scale,
+                grade_offset_percent=perturbation.grade_offset * 100.0,
+                relative_fuel_change=float(comparison.deltas["relative_fuel_change"]),
+                rms_speed_error_delta_kmh=float(comparison.deltas["delta_rms_speed_error"]) * 3.6,
+                adds_transitions=int(comparison.adds_summary["mode_transition_count"]),
+                adds_safety_overrides=int(comparison.adds_summary["safety_override_count"]),
+                constraint_regression=bool(comparison.deltas["constraint_regression"]),
+                verdict_code=verdict.code,
+                efficiency_claim_accepted=verdict.efficiency_claim_accepted,
+            )
+        )
+
+    accepted_runs = sum(1 for row in rows if row.efficiency_claim_accepted)
+    return DashboardSensitivitySummary(
+        scenario_id=scenario_id,
+        adds_controller_kind=adds_controller_kind,
+        accepted_runs=accepted_runs,
+        total_runs=len(rows),
+        acceptance_rate_percent=100.0 * accepted_runs / len(rows) if rows else 0.0,
+        best_relative_fuel_change=min((row.relative_fuel_change for row in rows), default=0.0),
+        worst_relative_fuel_change=max((row.relative_fuel_change for row in rows), default=0.0),
+        maximum_rms_speed_error_delta_kmh=max(
+            (row.rms_speed_error_delta_kmh for row in rows),
+            default=0.0,
+        ),
+        rows=tuple(rows),
+    )
 
 
 def records_for_dashboard(
