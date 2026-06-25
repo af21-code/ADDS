@@ -211,6 +211,9 @@ The Python simulator now provides:
   thresholds from train-split expert trajectories.
 - JSON checkpoints plus training and evaluation reports for the initial learned
   controller.
+- A fixed-grid offline policy-search benchmark that promotes a stronger
+  deterministic baseline only after train ranking, validation selection,
+  frozen-test comparison, and stress audit.
 - Robustness evaluation across deterministic mass, drag, rolling resistance,
   tire-friction, and grade perturbations.
 - JSON and CSV robustness reports for sensitivity and constraint-regression
@@ -228,6 +231,15 @@ The Python simulator now provides:
   perturbations, with per-run research verdicts.
 - Physical logging and summary metrics.
 - Unit tests for the initial Phase 1 through Phase 7A acceptance cases.
+
+Run the offline policy-search audit from the repository root:
+
+```bash
+/Users/angelo/venvs/adds-venv/bin/python -B -m adds_sim.policy_search artifacts/policy_search_report.json
+```
+
+The generated report preserves the candidate grid, train ranking, validation
+selection, frozen-test comparison, stress audit, and final promotion decision.
 
 The current ADDS implementation is intentionally simple. It is suitable for
 state-machine verification, early transition studies, baseline trade-off checks,

@@ -139,6 +139,8 @@ unverified physical model.
 - Training curves and evaluation reports.
 - Policy interface compatible with non-ML controllers.
 - Ablation studies for observations, preview horizon, and reward terms.
+- Leakage-resistant offline policy search with train ranking, validation
+  selection, frozen-test audit, and explicit non-promotion reports.
 
 ### Exit Criteria
 
@@ -146,6 +148,9 @@ unverified physical model.
   predeclared objective without degrading mandatory constraints.
 - Performance is reported across multiple seeds and held-out scenarios.
 - Failure cases are cataloged rather than hidden by aggregate averages.
+- A candidate that fails the frozen test remains unpromoted even when its train
+  objective is better; the current `C03` candidate passes the frozen test and
+  becomes the offline-optimized deterministic baseline.
 
 ## Phase 6: Robustness and Higher Fidelity
 

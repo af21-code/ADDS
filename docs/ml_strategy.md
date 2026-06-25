@@ -294,3 +294,30 @@ A learned controller advances only when it:
 6. Fails conservatively in tested out-of-distribution cases.
 
 No simulation result alone qualifies the policy for use in a physical vehicle.
+
+## 13. Offline Policy-Search Benchmark
+
+The first optimization benchmark uses a fixed six-candidate grid over the
+interpretable coast corridor. Candidates are ranked only on train scenarios
+under the existing deterministic perturbation envelope. The ranking requires
+zero fuel regression, no safety or constraint regression, no more than one
+five-transition decouple/re-engage sequence, and at most `1 km/h` RMS
+speed-error degradation.
+
+Candidates are then considered in train-ranked order on the validation split.
+The first candidate that passes every validation gate and produces at least one
+validated fuel benefit is frozen for a single test audit. Test results cannot
+be used to select a replacement candidate.
+
+The current audit promotes candidate `C03`, with a `0.5 m/s` upper coast
+corridor, `0.1 m/s` lower reconnect corridor, `0.25 m/s` minimum previewed
+target drop, and `0.005 rad` maximum coast grade. The better train-ranked
+candidate `C06` is rejected because it produces no validated coast benefit.
+`C03` then improves the high-speed frozen test by approximately `0.96`
+percentage points relative to the rule-based baseline while retaining one
+five-transition sequence, comparable speed tracking, and zero safety override.
+It also passes the stress-split audit.
+
+This promotes `C03` as a stronger deterministic offline-optimized baseline. It
+does not demonstrate that the behavioral-cloning policy outperforms that
+baseline; the ML promotion criterion therefore remains open.
