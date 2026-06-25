@@ -108,6 +108,11 @@ The current schema `2.0` clone learns the upper and lower coast-feasibility
 corridor from expert transition samples. It is intentionally small and
 interpretable; it is not yet an optimized ML policy.
 
+Held-out evaluation includes lower-speed and higher-speed coast profiles that
+are excluded from the train split. Reports compare the learned controller
+against the conventional baseline and record its high-level requested-mode
+agreement with the rule-based expert.
+
 ### Stage C: Offline Policy Improvement
 
 Where data coverage is adequate, evaluate conservative offline reinforcement

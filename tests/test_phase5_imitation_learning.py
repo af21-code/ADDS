@@ -1,15 +1,18 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
 from adds_sim import (
     BehavioralCloningModel,
+    ConventionalBaselineController,
     LearnedADDSController,
     LongitudinalSimulator,
     default_simulation_config,
     entries_by_split,
     phase4_scenario_catalog,
     collect_imitation_examples,
+    run_paired_comparison,
     summarize_run,
     train_behavioral_cloning_model,
 )
@@ -69,6 +72,30 @@ class Phase5ImitationLearningTests(unittest.TestCase):
                         self.config.safety.max_supervisor_overrides_per_km * max(summary["distance_traveled"] / 1000.0, 1.0),
                     )
 
+    def test_learned_controller_generalizes_to_held_out_coast_profiles(self) -> None:
+        examples = collect_imitation_examples(self.simulator, self.grouped["train"])
+        model = train_behavioral_cloning_model(examples).model
+        coast_entries = tuple(
+            entry
+            for split in ("validation", "test")
+            for entry in self.grouped[split]
+            if "coast" in entry.tags
+        )
+
+        self.assertEqual(len(coast_entries), 2)
+        for entry in coast_entries:
+            with self.subTest(scenario=entry.scenario.scenario_id):
+                comparison = run_paired_comparison(
+                    self.simulator,
+                    entry.scenario,
+                    ConventionalBaselineController(entry.scenario.initial_gear),
+                    LearnedADDSController(entry.scenario.initial_gear, model=model),
+                )
+                self.assertLessEqual(comparison.deltas["relative_fuel_change"], -1.0)
+                self.assertLessEqual(comparison.deltas["delta_rms_speed_error"] * 3.6, 1.0)
+                self.assertEqual(comparison.adds_summary["mode_transition_count"], 5)
+                self.assertEqual(comparison.adds_summary["safety_override_count"], 0)
+
     def test_training_entrypoint_writes_checkpoint_and_reports(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             artifacts = train_and_evaluate_imitation(Path(tmp))
@@ -76,6 +103,16 @@ class Phase5ImitationLearningTests(unittest.TestCase):
             self.assertTrue(artifacts.checkpoint_path.exists())
             self.assertTrue(artifacts.training_report_path.exists())
             self.assertTrue(artifacts.evaluation_report_path.exists())
+            evaluation = json.loads(
+                artifacts.evaluation_report_path.read_text(encoding="utf-8")
+            )
+            self.assertEqual(evaluation["schema_version"], "2.0")
+            coast_rows = [
+                row for row in evaluation["evaluations"] if "coast" in row["scenario_id"]
+            ]
+            self.assertEqual(len(coast_rows), 2)
+            self.assertTrue(all(row["relative_fuel_change"] <= -1.0 for row in coast_rows))
+            self.assertTrue(all(row["requested_mode_agreement"] >= 0.99 for row in coast_rows))
 
 
 if __name__ == "__main__":

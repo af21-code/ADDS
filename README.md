@@ -203,6 +203,8 @@ The Python simulator now provides:
 - A compact benchmark catalog and paired conventional-vs-ADDS comparison helper.
 - A versioned Phase 4 scenario catalog with train, validation, test, and stress
   splits.
+- Held-out lower-speed and higher-speed coast profiles for testing controller
+  generalization outside the training scenario.
 - Reproducible batch evaluation with manifest, summary CSV, and trajectory CSV
   export.
 - A lightweight imitation-learning pipeline that clones rule-based ADDS

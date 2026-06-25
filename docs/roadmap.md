@@ -110,6 +110,7 @@ unverified physical model.
 ### Deliverables
 
 - Scenario generator and versioned scenario catalog.
+- Held-out coast profiles below and above the training speed range.
 - Dataset schema and trajectory export format.
 - Reproducible batch evaluation.
 - Automated summary tables and plots.
@@ -117,6 +118,8 @@ unverified physical model.
 ### Exit Criteria
 
 - Test scenarios are isolated from training data.
+- Learned-controller reports include paired baseline deltas and expert-action
+  agreement on held-out scenarios.
 - Experiments can be rerun from stored configuration, seed, and model version.
 - Coverage includes nominal, boundary, and failure-oriented cases.
 

@@ -66,6 +66,10 @@ identical. That is expected: the scenario has no useful coasting opportunity.
 If the dashboard shows a warning saying there are no ADDS mode transitions, the
 adaptive drivetrain stayed connected for that run.
 
+Use `validation_lower_speed_coast` and `test_high_speed_coast` to inspect
+generalization outside the coast profile used for training. Both scenarios are
+excluded from the train split.
+
 ## 5. Run The Test Suite
 
 ```bash

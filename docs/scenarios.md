@@ -185,6 +185,14 @@ to `30 m/s` at `20 s`. The earlier two-second speed reduction was removed
 because its approximately `-3 m/s^2` target slope represented a braking event,
 not a physically credible highway coasting opportunity.
 
+Two additional profiles are isolated from training:
+
+- Validation: `24 -> 20 -> 24 m/s`, with a 12-second reduction ramp.
+- Test: `32 -> 28 -> 32 m/s`, with a 10-second reduction ramp.
+
+These profiles test generalization below and above the training speed range
+without changing controller thresholds.
+
 Expected behavior:
 
 - ADDS may save fuel if coast duration is long enough.

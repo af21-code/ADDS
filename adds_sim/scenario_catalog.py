@@ -76,6 +76,23 @@ def phase4_scenario_catalog() -> tuple[ScenarioCatalogEntry, ...]:
         ),
         ScenarioCatalogEntry(
             scenario=Scenario(
+                scenario_id="validation_lower_speed_coast",
+                initial_speed=24.0,
+                initial_gear=5,
+                time_limit=22.0,
+                target_speed_profile=PiecewiseLinearProfile(
+                    ((0.0, 24.0), (12.0, 20.0), (16.0, 20.0), (22.0, 24.0))
+                ),
+                grade_profile=ConstantProfile(0.0),
+                random_seed=2002,
+            ),
+            split="validation",
+            version="1.0",
+            description="Held-out lower-speed coast and reacceleration profile for policy generalization.",
+            tags=("coast", "lower-speed", "held-out", "validation"),
+        ),
+        ScenarioCatalogEntry(
+            scenario=Scenario(
                 scenario_id="test_mild_descent_lower_speed",
                 initial_speed=26.0,
                 initial_gear=5,
@@ -88,6 +105,23 @@ def phase4_scenario_catalog() -> tuple[ScenarioCatalogEntry, ...]:
             version="1.0",
             description="Held-out descent with lower speed target where engine braking can matter.",
             tags=("descent", "speed-reduction", "test"),
+        ),
+        ScenarioCatalogEntry(
+            scenario=Scenario(
+                scenario_id="test_high_speed_coast",
+                initial_speed=32.0,
+                initial_gear=5,
+                time_limit=20.0,
+                target_speed_profile=PiecewiseLinearProfile(
+                    ((0.0, 32.0), (10.0, 28.0), (14.0, 28.0), (20.0, 32.0))
+                ),
+                grade_profile=ConstantProfile(0.0),
+                random_seed=3002,
+            ),
+            split="test",
+            version="1.0",
+            description="Held-out high-speed coast and reacceleration profile outside the training speed range.",
+            tags=("coast", "high-speed", "held-out", "test"),
         ),
         ScenarioCatalogEntry(
             scenario=Scenario(

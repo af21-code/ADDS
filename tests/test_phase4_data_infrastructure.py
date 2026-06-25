@@ -28,6 +28,16 @@ class Phase4DataInfrastructureTests(unittest.TestCase):
         self.assertIn("validation", grouped)
         self.assertIn("test", grouped)
         self.assertIn("stress", grouped)
+        self.assertTrue(
+            all("held-out" in entry.tags for entry in grouped["validation"] + grouped["test"] if "coast" in entry.tags)
+        )
+        train_ids = {entry.scenario.scenario_id for entry in grouped["train"]}
+        held_out_ids = {
+            entry.scenario.scenario_id
+            for split in ("validation", "test")
+            for entry in grouped[split]
+        }
+        self.assertTrue(train_ids.isdisjoint(held_out_ids))
 
     def test_batch_evaluation_writes_manifest_summary_and_trajectories(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
