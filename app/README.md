@@ -35,6 +35,8 @@ The dashboard opens on the `train_highway_lift_off` scenario because it is the
 clearest first demonstration. You should see:
 
 - A sidebar with a scenario selector and an ADDS controller selector.
+- Three ADDS controller choices: `Rule-based ADDS`, `Offline-optimized ADDS`,
+  and `Learned ADDS`.
 - Five tabs: project overview, scenario comparison, catalog summary,
   robustness, and downloads.
 - A project overview explaining the conventional baseline, adaptive vehicle,
@@ -69,6 +71,11 @@ adaptive drivetrain stayed connected for that run.
 Use `validation_lower_speed_coast` and `test_high_speed_coast` to inspect
 generalization outside the coast profile used for training. Both scenarios are
 excluded from the train split.
+
+Use `Offline-optimized ADDS` on `test_high_speed_coast` to inspect the promoted
+candidate `C03` from the policy-search audit. It should improve simulated fuel
+use more than the initial rule-based baseline while keeping five ADDS mode
+transitions and zero safety overrides.
 
 ## 5. Run The Test Suite
 

@@ -3,6 +3,7 @@ import unittest
 from adds_sim import (
     ConventionalBaselineController,
     LongitudinalSimulator,
+    OfflineOptimizedADDSController,
     RuleBasedADDSController,
     benchmark_scenarios,
     default_simulation_config,
@@ -10,6 +11,7 @@ from adds_sim import (
     summarize_run,
 )
 from adds_sim.benchmarks import with_adds_enabled
+from adds_sim.scenario_catalog import phase4_scenario_catalog
 
 
 class Phase3BaselineTests(unittest.TestCase):
@@ -90,6 +92,35 @@ class Phase3BaselineTests(unittest.TestCase):
         self.assertLessEqual(comparison.deltas["delta_rms_speed_error"] * 3.6, 1.0)
         self.assertEqual(comparison.adds_summary["mode_transition_count"], 5)
         self.assertEqual(comparison.adds_summary["safety_override_count"], 0)
+
+    def test_offline_optimized_adds_improves_frozen_high_speed_coast(self) -> None:
+        scenario = next(
+            entry.scenario
+            for entry in phase4_scenario_catalog()
+            if entry.scenario.scenario_id == "test_high_speed_coast"
+        )
+        rule_based = run_paired_comparison(
+            self.simulator,
+            scenario,
+            ConventionalBaselineController(gear=scenario.initial_gear),
+            RuleBasedADDSController(gear=scenario.initial_gear),
+        )
+        optimized = run_paired_comparison(
+            self.simulator,
+            scenario,
+            ConventionalBaselineController(gear=scenario.initial_gear),
+            OfflineOptimizedADDSController(gear=scenario.initial_gear),
+        )
+
+        self.assertEqual(optimized.adds_result.controller_name, "offline_optimized_adds")
+        self.assertLessEqual(optimized.deltas["relative_fuel_change"], -1.0)
+        self.assertLess(
+            optimized.deltas["relative_fuel_change"],
+            rule_based.deltas["relative_fuel_change"] - 0.5,
+        )
+        self.assertLessEqual(optimized.deltas["delta_rms_speed_error"] * 3.6, 1.0)
+        self.assertEqual(optimized.adds_summary["mode_transition_count"], 5)
+        self.assertEqual(optimized.adds_summary["safety_override_count"], 0)
 
 
 if __name__ == "__main__":

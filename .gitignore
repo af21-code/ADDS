@@ -8,6 +8,7 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+artifacts/
 
 # Virtual environments are kept outside this project because the path contains a colon.
 .venv/

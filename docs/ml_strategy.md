@@ -319,5 +319,8 @@ five-transition sequence, comparable speed tracking, and zero safety override.
 It also passes the stress-split audit.
 
 This promotes `C03` as a stronger deterministic offline-optimized baseline. It
-does not demonstrate that the behavioral-cloning policy outperforms that
-baseline; the ML promotion criterion therefore remains open.
+is exposed in the simulator and dashboard as `offline_optimized_adds`, so later
+learned policies must compare against both the original rule-based baseline and
+this promoted deterministic baseline. This does not demonstrate that the
+behavioral-cloning policy outperforms the optimized baseline; the ML promotion
+criterion therefore remains open.

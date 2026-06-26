@@ -108,6 +108,7 @@ constraints remain comparable.
 |   |-- metrics.py
 |   |-- ml.py
 |   |-- parameters.py
+|   |-- policy_search.py
 |   |-- profiles.py
 |   |-- robustness.py
 |   |-- run_robustness.py
@@ -136,6 +137,7 @@ constraints remain comparable.
     |-- test_phase3_baselines.py
     |-- test_phase4_data_infrastructure.py
     |-- test_phase5_imitation_learning.py
+    |-- test_phase5_policy_search.py
     |-- test_phase6_robustness.py
     `-- test_phase7_visualization.py
 ```
@@ -146,9 +148,11 @@ Phase 4 scenario/data infrastructure. It also includes a first Phase 5
 behavioral-cloning pipeline for an interpretable learned ADDS controller.
 Phase 6 robustness and sensitivity evaluation is available for compact
 uncertainty sweeps. A first Phase 7A Streamlit visualization prototype is
-available for reviewing conventional-vs-ADDS scenario comparisons. Advanced ML,
-optimized ADDS policy training, and real-time integration are deferred until the
-scenario catalog and exported datasets are broader.
+available for reviewing conventional-vs-ADDS scenario comparisons. The promoted
+offline-optimized deterministic ADDS baseline is now available beside the
+rule-based and learned controllers. Advanced ML policy improvement and
+real-time integration are deferred until the scenario catalog and exported
+datasets are broader.
 
 ## Documentation
 
@@ -196,6 +200,8 @@ The Python simulator now provides:
   fault fallback, and re-engagement slip limits.
 - Basic rev-matching and controlled re-engagement behavior.
 - Conventional and transparent rule-based ADDS baseline controllers.
+- A promoted offline-optimized ADDS baseline that freezes policy-search
+  candidate `C03`.
 - A one-second target preview and coast-feasibility corridor that preserve equal
   speed-tracking gains across the conventional and ADDS baselines.
 - Conservative guards against marginal target changes and uphill coast entries
@@ -221,6 +227,8 @@ The Python simulator now provides:
 - Dashboard-ready comparison helpers and a Streamlit visualization prototype.
 - A project-facing dashboard layout with overview, scenario comparison, catalog
   summary, and result downloads.
+- Dashboard selection among rule-based, offline-optimized, and learned ADDS
+  controller variants.
 - Automatic dashboard insights that summarize fuel benefit, state transitions,
   speed-tracking impact, and safety signals for the selected scenario.
 - An explicit dashboard research verdict that rejects efficiency claims when
@@ -341,8 +349,9 @@ python3 -m streamlit run app/streamlit_app.py --server.address localhost
 ```
 
 The dashboard lets you select a catalog scenario, compare the conventional
-baseline against either the rule-based or learned ADDS controller, and inspect
-speed, fuel, engine-speed, coupling-mode, and slip-energy curves side by side.
+baseline against the rule-based, offline-optimized, or learned ADDS controller,
+and inspect speed, fuel, engine-speed, coupling-mode, and slip-energy curves
+side by side.
 
 ## License
 

@@ -142,6 +142,30 @@ class Phase7VisualizationTests(unittest.TestCase):
         self.assertGreater(len(comparison.adds_records), 0)
         self.assertEqual(comparison.comparison.adds_result.controller_name, "learned_adds")
 
+    def test_builds_offline_optimized_dashboard_comparison(self) -> None:
+        rule_based = build_dashboard_comparison("test_high_speed_coast", "rule_based")
+        optimized = build_dashboard_comparison("test_high_speed_coast", "offline_optimized")
+
+        self.assertEqual(optimized.adds_controller_kind, "offline_optimized")
+        self.assertEqual(optimized.comparison.adds_result.controller_name, "offline_optimized_adds")
+        self.assertEqual(optimized.verdict.code, "ACCEPTABLE_BENEFIT")
+        self.assertLess(
+            optimized.comparison.deltas["relative_fuel_change"],
+            rule_based.comparison.deltas["relative_fuel_change"] - 0.5,
+        )
+        self.assertEqual(optimized.comparison.adds_summary["mode_transition_count"], 5)
+        self.assertEqual(optimized.comparison.adds_summary["safety_override_count"], 0)
+
+    def test_offline_optimized_catalog_and_sensitivity_are_supported(self) -> None:
+        rows = build_dashboard_catalog_summary("offline_optimized")
+        summary = build_dashboard_sensitivity("test_high_speed_coast", "offline_optimized")
+
+        self.assertTrue(rows)
+        self.assertEqual(rows[0].adds_controller_kind, "offline_optimized")
+        self.assertEqual(summary.adds_controller_kind, "offline_optimized")
+        self.assertEqual(summary.total_runs, 8)
+        self.assertTrue(any(row.efficiency_claim_accepted for row in summary.rows))
+
     def test_rejects_unknown_dashboard_scenario(self) -> None:
         with self.assertRaises(ValueError):
             build_dashboard_comparison("missing_scenario")

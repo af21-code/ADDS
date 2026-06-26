@@ -189,6 +189,8 @@ results inspectable before real-time integration work begins.
   conventional-vs-ADDS evaluation path.
 - Provide an initial Streamlit app for selecting catalog scenarios and ADDS
   controller variants.
+- Expose the promoted offline-optimized `C03` deterministic baseline as a
+  dashboard-selectable controller variant.
 - Present the project purpose, operating modes, and simulation-only limitations
   directly inside the dashboard.
 - Show side-by-side curves for speed tracking, cumulative fuel use, engine
@@ -212,6 +214,7 @@ results inspectable before real-time integration work begins.
 - Streamlit dashboard prototype.
 - Dashboard data-preparation helpers.
 - Project overview, catalog summary, and download panels.
+- Rule-based, offline-optimized, and learned ADDS controller comparison paths.
 - Tests for dashboard comparison packaging and metric-card generation.
 - Documented initial acceptance gates and verdict classification tests.
 - Interactive sensitivity view for the deterministic uncertainty envelope.

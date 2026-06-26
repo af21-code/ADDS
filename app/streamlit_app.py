@@ -522,11 +522,25 @@ def main() -> None:
         selected_label = st.selectbox("Scenario", tuple(option_by_label), index=default_index)
         controller_label = st.radio(
             "ADDS controller",
-            ("Rule-based ADDS", "Learned ADDS"),
-            help="The learned controller is a compact behavioral-cloning policy trained from the rule-based expert.",
+            ("Rule-based ADDS", "Offline-optimized ADDS", "Learned ADDS"),
+            help=(
+                "Rule-based is the transparent initial baseline. Offline-optimized "
+                "freezes the promoted C03 search candidate. Learned is a compact "
+                "behavioral-cloning policy trained from the rule-based expert."
+            ),
         )
-        controller_kind = "learned" if controller_label == "Learned ADDS" else "rule_based"
+        controller_kind_by_label = {
+            "Rule-based ADDS": "rule_based",
+            "Offline-optimized ADDS": "offline_optimized",
+            "Learned ADDS": "learned",
+        }
+        controller_kind = controller_kind_by_label[controller_label]
         selected = option_by_label[selected_label]
+        if controller_kind == "offline_optimized":
+            st.caption(
+                "The offline-optimized controller freezes candidate C03 from the "
+                "train/validation/test policy-search audit."
+            )
         if controller_kind == "learned":
             st.caption("The learned controller is an early conservative clone and may choose not to decouple.")
         st.caption(selected.description)

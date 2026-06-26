@@ -187,6 +187,22 @@ class RuleBasedADDSController(SpeedTrackingController):
 
 
 @dataclass(frozen=True)
+class OfflineOptimizedADDSController(RuleBasedADDSController):
+    """Promoted deterministic ADDS baseline from the leakage-resistant search.
+
+    This controller freezes the Phase 5 offline policy-search candidate `C03`.
+    It is still interpretable and rule-shaped; only the coast corridor is widened
+    after train-ranking, validation selection, and frozen-test promotion.
+    """
+
+    coast_speed_margin: float = 0.5
+    reconnect_speed_margin: float = 0.1
+    minimum_target_speed_drop: float = 0.25
+    maximum_coast_grade: float = 0.005
+    name: str = "offline_optimized_adds"
+
+
+@dataclass(frozen=True)
 class ScriptedModeController(Controller):
     """Time-scheduled controller useful for deterministic state-machine tests."""
 

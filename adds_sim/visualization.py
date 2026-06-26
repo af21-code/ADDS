@@ -5,7 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .comparison import PairedComparisonResult, run_paired_comparison
-from .controllers import ConventionalBaselineController, RuleBasedADDSController
+from .controllers import (
+    ConventionalBaselineController,
+    OfflineOptimizedADDSController,
+    RuleBasedADDSController,
+)
 from .defaults import default_simulation_config
 from .learned_controller import LearnedADDSController
 from .ml import collect_imitation_examples, train_behavioral_cloning_model
@@ -189,15 +193,12 @@ def build_dashboard_comparison(
     simulator = LongitudinalSimulator(default_simulation_config())
     conventional_controller = ConventionalBaselineController(entry.scenario.initial_gear)
 
-    if adds_controller_kind == "rule_based":
-        adds_controller = RuleBasedADDSController(entry.scenario.initial_gear)
-    elif adds_controller_kind == "learned":
-        training_entries = tuple(item for item in catalog if item.split == "train")
-        examples = collect_imitation_examples(simulator, training_entries)
-        model = train_behavioral_cloning_model(examples).model
-        adds_controller = LearnedADDSController(gear=entry.scenario.initial_gear, model=model)
-    else:
-        raise ValueError(f"unknown adds_controller_kind: {adds_controller_kind}")
+    adds_controller = _adds_controller_for_dashboard(
+        adds_controller_kind,
+        entry.scenario.initial_gear,
+        catalog,
+        simulator,
+    )
 
     comparison = run_paired_comparison(
         simulator=simulator,
@@ -277,7 +278,7 @@ def build_dashboard_sensitivity(
         training_simulator = LongitudinalSimulator(base_config)
         examples = collect_imitation_examples(training_simulator, training_entries)
         learned_model = train_behavioral_cloning_model(examples).model
-    elif adds_controller_kind != "rule_based":
+    elif adds_controller_kind not in {"rule_based", "offline_optimized"}:
         raise ValueError(f"unknown adds_controller_kind: {adds_controller_kind}")
 
     rows: list[DashboardSensitivityRow] = []
@@ -288,6 +289,8 @@ def build_dashboard_sensitivity(
         conventional_controller = ConventionalBaselineController(scenario.initial_gear)
         if adds_controller_kind == "rule_based":
             adds_controller = RuleBasedADDSController(scenario.initial_gear)
+        elif adds_controller_kind == "offline_optimized":
+            adds_controller = OfflineOptimizedADDSController(scenario.initial_gear)
         else:
             adds_controller = LearnedADDSController(
                 gear=scenario.initial_gear,
@@ -333,6 +336,24 @@ def build_dashboard_sensitivity(
         ),
         rows=tuple(rows),
     )
+
+
+def _adds_controller_for_dashboard(
+    adds_controller_kind: str,
+    gear: int,
+    catalog: tuple[ScenarioCatalogEntry, ...],
+    simulator: LongitudinalSimulator,
+):
+    if adds_controller_kind == "rule_based":
+        return RuleBasedADDSController(gear)
+    if adds_controller_kind == "offline_optimized":
+        return OfflineOptimizedADDSController(gear)
+    if adds_controller_kind == "learned":
+        training_entries = tuple(item for item in catalog if item.split == "train")
+        examples = collect_imitation_examples(simulator, training_entries)
+        model = train_behavioral_cloning_model(examples).model
+        return LearnedADDSController(gear=gear, model=model)
+    raise ValueError(f"unknown adds_controller_kind: {adds_controller_kind}")
 
 
 def records_for_dashboard(
