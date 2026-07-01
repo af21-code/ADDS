@@ -21,6 +21,7 @@ from adds_sim.visualization import (
     available_dashboard_scenarios,
     build_dashboard_catalog_summary,
     build_dashboard_comparison,
+    build_dashboard_controller_portfolio,
     build_dashboard_sensitivity,
 )
 
@@ -48,6 +49,11 @@ def _catalog_summary(controller_kind: str):
 
 
 @st.cache_data(show_spinner=True)
+def _controller_portfolio():
+    return build_dashboard_controller_portfolio()
+
+
+@st.cache_data(show_spinner=True)
 def _sensitivity_summary(scenario_id: str, controller_kind: str):
     return build_dashboard_sensitivity(scenario_id, controller_kind)
 
@@ -58,6 +64,10 @@ def _records_frame(comparison) -> pd.DataFrame:
 
 def _catalog_frame(controller_kind: str) -> pd.DataFrame:
     return pd.DataFrame(asdict(row) for row in _catalog_summary(controller_kind))
+
+
+def _controller_portfolio_frame() -> pd.DataFrame:
+    return pd.DataFrame(asdict(row) for row in _controller_portfolio())
 
 
 def _mode_duration_frame(comparison) -> pd.DataFrame:
@@ -159,6 +169,57 @@ def _catalog_fuel_chart(summary_df: pd.DataFrame):
     )
     fig.add_hline(y=0.0, line_dash="dash", line_color="black")
     fig.update_layout(margin=dict(l=10, r=10, t=50, b=10), xaxis_tickangle=-30)
+    return fig
+
+
+def _controller_portfolio_fuel_chart(portfolio_df: pd.DataFrame):
+    fig = px.bar(
+        portfolio_df,
+        x="scenario_id",
+        y="relative_fuel_change",
+        color="controller_label",
+        barmode="group",
+        title="Controller Portfolio Fuel Change",
+        labels={
+            "scenario_id": "Scenario",
+            "relative_fuel_change": "Relative fuel change [%]",
+            "controller_label": "ADDS controller",
+        },
+    )
+    fig.add_hline(y=0.0, line_dash="dot", line_color="black")
+    fig.add_hline(y=-1.0, line_dash="dash", line_color="green")
+    fig.update_layout(margin=dict(l=10, r=10, t=50, b=10), xaxis_tickangle=-30)
+    return fig
+
+
+def _controller_portfolio_acceptance_chart(portfolio_df: pd.DataFrame):
+    acceptance_df = (
+        portfolio_df.groupby("controller_label", as_index=False)
+        .agg(
+            accepted_runs=("efficiency_claim_accepted", "sum"),
+            total_runs=("scenario_id", "count"),
+        )
+        .assign(
+            acceptance_rate_percent=lambda df: 100.0
+            * df["accepted_runs"]
+            / df["total_runs"]
+        )
+    )
+    fig = px.bar(
+        acceptance_df,
+        x="controller_label",
+        y="acceptance_rate_percent",
+        text="accepted_runs",
+        title="Accepted Efficiency Claims By Controller",
+        labels={
+            "controller_label": "ADDS controller",
+            "acceptance_rate_percent": "Acceptance rate [%]",
+            "accepted_runs": "Accepted runs",
+        },
+    )
+    fig.update_yaxes(range=[0, 100])
+    fig.update_traces(texttemplate="%{text} accepted", textposition="outside")
+    fig.update_layout(margin=dict(l=10, r=10, t=50, b=10), xaxis_tickangle=-20)
     return fig
 
 
@@ -403,6 +464,39 @@ def _render_catalog_tab(summary_df: pd.DataFrame) -> None:
     )
 
 
+def _render_controller_portfolio_tab(portfolio_df: pd.DataFrame) -> None:
+    st.subheader("Controller Portfolio")
+    st.write(
+        "This view runs every catalog scenario across the available ADDS "
+        "controller variants. It is useful for checking whether a new controller "
+        "wins only in one hand-picked case or remains comparable across the "
+        "full current catalog."
+    )
+    left, right = st.columns(2)
+    with left:
+        st.plotly_chart(_controller_portfolio_fuel_chart(portfolio_df), width="stretch")
+    with right:
+        st.plotly_chart(_controller_portfolio_acceptance_chart(portfolio_df), width="stretch")
+
+    st.dataframe(
+        portfolio_df[
+            [
+                "scenario_id",
+                "split",
+                "controller_label",
+                "relative_fuel_change",
+                "rms_speed_error_delta_kmh",
+                "adds_transitions",
+                "adds_safety_overrides",
+                "verdict_code",
+                "efficiency_claim_accepted",
+            ]
+        ],
+        width="stretch",
+        hide_index=True,
+    )
+
+
 def _render_robustness_tab(sensitivity, sensitivity_df: pd.DataFrame) -> None:
     st.subheader("Robustness And Sensitivity")
     st.write(
@@ -464,6 +558,7 @@ def _render_downloads_tab(
     comparison,
     df: pd.DataFrame,
     summary_df: pd.DataFrame,
+    portfolio_df: pd.DataFrame,
     sensitivity_df: pd.DataFrame,
 ) -> None:
     st.subheader("Downloads")
@@ -484,6 +579,12 @@ def _render_downloads_tab(
         label="Download catalog summary CSV",
         data=summary_df.to_csv(index=False),
         file_name=f"adds_catalog_{comparison.adds_controller_kind}_summary.csv",
+        mime="text/csv",
+    )
+    st.download_button(
+        label="Download controller portfolio CSV",
+        data=portfolio_df.to_csv(index=False),
+        file_name="adds_controller_portfolio.csv",
         mime="text/csv",
     )
     st.download_button(
@@ -549,14 +650,16 @@ def main() -> None:
     comparison = _comparison(selected.scenario_id, controller_kind)
     df = _records_frame(comparison)
     summary_df = _catalog_frame(controller_kind)
+    portfolio_df = _controller_portfolio_frame()
     sensitivity = _sensitivity_summary(selected.scenario_id, controller_kind)
     sensitivity_df = _sensitivity_frame(sensitivity)
 
-    overview_tab, comparison_tab, catalog_tab, robustness_tab, downloads_tab = st.tabs(
+    overview_tab, comparison_tab, catalog_tab, portfolio_tab, robustness_tab, downloads_tab = st.tabs(
         (
             "Project Overview",
             "Scenario Comparison",
             "Catalog Summary",
+            "Controller Portfolio",
             "Robustness",
             "Downloads",
         )
@@ -567,10 +670,12 @@ def main() -> None:
         _render_comparison_tab(comparison, df)
     with catalog_tab:
         _render_catalog_tab(summary_df)
+    with portfolio_tab:
+        _render_controller_portfolio_tab(portfolio_df)
     with robustness_tab:
         _render_robustness_tab(sensitivity, sensitivity_df)
     with downloads_tab:
-        _render_downloads_tab(comparison, df, summary_df, sensitivity_df)
+        _render_downloads_tab(comparison, df, summary_df, portfolio_df, sensitivity_df)
 
     st.caption(
         "This prototype is for research visualization only. Simulation results "

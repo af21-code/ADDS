@@ -204,6 +204,8 @@ results inspectable before real-time integration work begins.
 - Add event-level diagnostics for mode durations, transition timing, speed, and
   slip at each detected ADDS state change.
 - Add catalog-level summaries and downloadable CSV/JSON outputs.
+- Add a controller-portfolio matrix for comparing all dashboard controller
+  variants across every catalog scenario.
 - Add scenario-level robustness envelopes with per-perturbation verdicts,
   acceptance rates, trade-off plots, and CSV export.
 - Keep visualization code separate from the simulator core so automated tests do
@@ -215,6 +217,7 @@ results inspectable before real-time integration work begins.
 - Dashboard data-preparation helpers.
 - Project overview, catalog summary, and download panels.
 - Rule-based, offline-optimized, and learned ADDS controller comparison paths.
+- Controller-portfolio summary and CSV export.
 - Tests for dashboard comparison packaging and metric-card generation.
 - Documented initial acceptance gates and verdict classification tests.
 - Interactive sensitivity view for the deterministic uncertainty envelope.

@@ -31,6 +31,12 @@ MODE_ORDER = (
     "FAULT_SAFE",
 )
 MODE_TO_INDEX = {mode: index for index, mode in enumerate(MODE_ORDER)}
+DASHBOARD_CONTROLLER_LABELS = {
+    "rule_based": "Rule-based ADDS",
+    "offline_optimized": "Offline-optimized ADDS",
+    "learned": "Learned ADDS",
+}
+SUPPORTED_DASHBOARD_CONTROLLER_KINDS = tuple(DASHBOARD_CONTROLLER_LABELS)
 
 
 @dataclass(frozen=True)
@@ -120,6 +126,25 @@ class DashboardCatalogRow:
     split: str
     description: str
     adds_controller_kind: str
+    fuel_delta_ml: float
+    relative_fuel_change: float
+    rms_speed_error_delta_kmh: float
+    adds_transitions: int
+    adds_safety_overrides: int
+    constraint_regression: bool
+    verdict_code: str
+    efficiency_claim_accepted: bool
+
+
+@dataclass(frozen=True)
+class DashboardControllerPortfolioRow:
+    """One scenario-controller result for cross-controller dashboard review."""
+
+    scenario_id: str
+    split: str
+    description: str
+    adds_controller_kind: str
+    controller_label: str
     fuel_delta_ml: float
     relative_fuel_change: float
     rms_speed_error_delta_kmh: float
@@ -262,6 +287,37 @@ def build_dashboard_catalog_summary(
     return tuple(rows)
 
 
+def build_dashboard_controller_portfolio(
+    adds_controller_kinds: tuple[str, ...] = SUPPORTED_DASHBOARD_CONTROLLER_KINDS,
+    entries: tuple[ScenarioCatalogEntry, ...] | None = None,
+) -> tuple[DashboardControllerPortfolioRow, ...]:
+    """Run all selected controller variants across the scenario catalog."""
+
+    catalog = entries or phase4_scenario_catalog()
+    rows: list[DashboardControllerPortfolioRow] = []
+    for controller_kind in adds_controller_kinds:
+        _validate_dashboard_controller_kind(controller_kind)
+        for row in build_dashboard_catalog_summary(controller_kind, catalog):
+            rows.append(
+                DashboardControllerPortfolioRow(
+                    scenario_id=row.scenario_id,
+                    split=row.split,
+                    description=row.description,
+                    adds_controller_kind=row.adds_controller_kind,
+                    controller_label=DASHBOARD_CONTROLLER_LABELS[row.adds_controller_kind],
+                    fuel_delta_ml=row.fuel_delta_ml,
+                    relative_fuel_change=row.relative_fuel_change,
+                    rms_speed_error_delta_kmh=row.rms_speed_error_delta_kmh,
+                    adds_transitions=row.adds_transitions,
+                    adds_safety_overrides=row.adds_safety_overrides,
+                    constraint_regression=row.constraint_regression,
+                    verdict_code=row.verdict_code,
+                    efficiency_claim_accepted=row.efficiency_claim_accepted,
+                )
+            )
+    return tuple(rows)
+
+
 def build_dashboard_sensitivity(
     scenario_id: str,
     adds_controller_kind: str = "rule_based",
@@ -354,6 +410,11 @@ def _adds_controller_for_dashboard(
         model = train_behavioral_cloning_model(examples).model
         return LearnedADDSController(gear=gear, model=model)
     raise ValueError(f"unknown adds_controller_kind: {adds_controller_kind}")
+
+
+def _validate_dashboard_controller_kind(adds_controller_kind: str) -> None:
+    if adds_controller_kind not in SUPPORTED_DASHBOARD_CONTROLLER_KINDS:
+        raise ValueError(f"unknown adds_controller_kind: {adds_controller_kind}")
 
 
 def records_for_dashboard(

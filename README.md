@@ -229,6 +229,8 @@ The Python simulator now provides:
   summary, and result downloads.
 - Dashboard selection among rule-based, offline-optimized, and learned ADDS
   controller variants.
+- A controller-portfolio dashboard view that compares all ADDS controller
+  variants across the full current scenario catalog.
 - Automatic dashboard insights that summarize fuel benefit, state transitions,
   speed-tracking impact, and safety signals for the selected scenario.
 - An explicit dashboard research verdict that rejects efficiency claims when
@@ -350,8 +352,8 @@ python3 -m streamlit run app/streamlit_app.py --server.address localhost
 
 The dashboard lets you select a catalog scenario, compare the conventional
 baseline against the rule-based, offline-optimized, or learned ADDS controller,
-and inspect speed, fuel, engine-speed, coupling-mode, and slip-energy curves
-side by side.
+inspect speed, fuel, engine-speed, coupling-mode, and slip-energy curves side
+by side, and review a controller portfolio matrix across the full catalog.
 
 ## License
 

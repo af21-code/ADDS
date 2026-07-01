@@ -5,6 +5,7 @@ from adds_sim.visualization import (
     available_dashboard_scenarios,
     build_dashboard_catalog_summary,
     build_dashboard_comparison,
+    build_dashboard_controller_portfolio,
     build_dashboard_sensitivity,
     evaluate_dashboard_comparison,
     mode_duration_rows,
@@ -165,6 +166,35 @@ class Phase7VisualizationTests(unittest.TestCase):
         self.assertEqual(summary.adds_controller_kind, "offline_optimized")
         self.assertEqual(summary.total_runs, 8)
         self.assertTrue(any(row.efficiency_claim_accepted for row in summary.rows))
+
+    def test_controller_portfolio_compares_all_dashboard_controllers(self) -> None:
+        options = available_dashboard_scenarios()
+        rows = build_dashboard_controller_portfolio()
+
+        self.assertEqual(len(rows), len(options) * 3)
+        self.assertEqual(
+            {row.adds_controller_kind for row in rows},
+            {"rule_based", "offline_optimized", "learned"},
+        )
+        self.assertTrue(all(row.controller_label for row in rows))
+        self.assertTrue(all(row.verdict_code for row in rows))
+
+    def test_controller_portfolio_shows_optimized_frozen_test_gain(self) -> None:
+        rows = [
+            row
+            for row in build_dashboard_controller_portfolio()
+            if row.scenario_id == "test_high_speed_coast"
+        ]
+        relative_fuel_by_controller = {
+            row.adds_controller_kind: row.relative_fuel_change
+            for row in rows
+        }
+
+        self.assertLess(
+            relative_fuel_by_controller["offline_optimized"],
+            relative_fuel_by_controller["rule_based"] - 0.5,
+        )
+        self.assertLessEqual(relative_fuel_by_controller["offline_optimized"], -1.0)
 
     def test_rejects_unknown_dashboard_scenario(self) -> None:
         with self.assertRaises(ValueError):
