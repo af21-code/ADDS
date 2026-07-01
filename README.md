@@ -101,6 +101,7 @@ constraints remain comparable.
 |   |-- benchmarks.py
 |   |-- cli.py
 |   |-- comparison.py
+|   |-- controller_portfolio.py
 |   |-- controllers.py
 |   |-- data.py
 |   |-- defaults.py
@@ -111,6 +112,7 @@ constraints remain comparable.
 |   |-- policy_search.py
 |   |-- profiles.py
 |   |-- robustness.py
+|   |-- run_controller_portfolio.py
 |   |-- run_robustness.py
 |   |-- scenario_catalog.py
 |   |-- simulator.py
@@ -139,6 +141,7 @@ constraints remain comparable.
     |-- test_phase5_imitation_learning.py
     |-- test_phase5_policy_search.py
     |-- test_phase6_robustness.py
+    |-- test_phase7_controller_portfolio_report.py
     `-- test_phase7_visualization.py
 ```
 
@@ -231,6 +234,8 @@ The Python simulator now provides:
   controller variants.
 - A controller-portfolio dashboard view that compares all ADDS controller
   variants across the full current scenario catalog.
+- A reproducible controller-portfolio JSON/CSV report for reviewing the same
+  cross-controller matrix outside the dashboard.
 - Automatic dashboard insights that summarize fuel benefit, state transitions,
   speed-tracking impact, and safety signals for the selected scenario.
 - An explicit dashboard research verdict that rejects efficiency claims when
@@ -341,6 +346,19 @@ This writes:
 ```text
 /tmp/adds_phase6_robustness/robustness_report.json
 /tmp/adds_phase6_robustness/robustness_runs.csv
+```
+
+Run the controller-portfolio report:
+
+```bash
+python3 -B -m adds_sim.run_controller_portfolio /tmp/adds_phase7_controller_portfolio
+```
+
+This writes:
+
+```text
+/tmp/adds_phase7_controller_portfolio/controller_portfolio_report.json
+/tmp/adds_phase7_controller_portfolio/controller_portfolio_rows.csv
 ```
 
 Run the Phase 7A Streamlit visualization prototype:

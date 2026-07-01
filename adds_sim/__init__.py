@@ -3,6 +3,12 @@
 from .batch import BatchEvaluationResult, run_batch_evaluation
 from .benchmarks import benchmark_scenarios
 from .comparison import PairedComparisonResult, run_paired_comparison
+from .controller_portfolio import (
+    ControllerPortfolioAggregate,
+    ControllerPortfolioReport,
+    build_controller_portfolio_report,
+    write_controller_portfolio_report,
+)
 from .controllers import (
     CoastController,
     ConstantEngineTorqueController,
@@ -76,6 +82,8 @@ __all__ = [
     "ConstantEngineTorqueController",
     "ConstantProfile",
     "ConventionalBaselineController",
+    "ControllerPortfolioAggregate",
+    "ControllerPortfolioReport",
     "CouplingParameters",
     "DashboardCatalogRow",
     "DashboardComparison",
@@ -123,6 +131,7 @@ __all__ = [
     "build_dashboard_comparison",
     "build_dashboard_controller_portfolio",
     "build_dashboard_sensitivity",
+    "build_controller_portfolio_report",
     "collect_imitation_examples",
     "coast_is_feasible",
     "default_simulation_config",
@@ -142,4 +151,5 @@ __all__ = [
     "summarize_run",
     "train_behavioral_cloning_model",
     "write_robustness_report",
+    "write_controller_portfolio_report",
 ]

@@ -206,6 +206,8 @@ results inspectable before real-time integration work begins.
 - Add catalog-level summaries and downloadable CSV/JSON outputs.
 - Add a controller-portfolio matrix for comparing all dashboard controller
   variants across every catalog scenario.
+- Add a command-line controller-portfolio report that writes the same
+  comparison as JSON and CSV artifacts.
 - Add scenario-level robustness envelopes with per-perturbation verdicts,
   acceptance rates, trade-off plots, and CSV export.
 - Keep visualization code separate from the simulator core so automated tests do
@@ -218,6 +220,7 @@ results inspectable before real-time integration work begins.
 - Project overview, catalog summary, and download panels.
 - Rule-based, offline-optimized, and learned ADDS controller comparison paths.
 - Controller-portfolio summary and CSV export.
+- Reproducible controller-portfolio report artifacts.
 - Tests for dashboard comparison packaging and metric-card generation.
 - Documented initial acceptance gates and verdict classification tests.
 - Interactive sensitivity view for the deterministic uncertainty envelope.
