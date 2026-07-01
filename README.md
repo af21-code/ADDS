@@ -113,6 +113,7 @@ constraints remain comparable.
 |   |-- profiles.py
 |   |-- robustness.py
 |   |-- run_controller_portfolio.py
+|   |-- run_controller_robustness_portfolio.py
 |   |-- run_robustness.py
 |   |-- scenario_catalog.py
 |   |-- simulator.py
@@ -236,6 +237,8 @@ The Python simulator now provides:
   variants across the full current scenario catalog.
 - A reproducible controller-portfolio JSON/CSV report for reviewing the same
   cross-controller matrix outside the dashboard.
+- A reproducible controller-robustness portfolio report that compares all ADDS
+  controller variants across the default perturbation envelope.
 - Automatic dashboard insights that summarize fuel benefit, state transitions,
   speed-tracking impact, and safety signals for the selected scenario.
 - An explicit dashboard research verdict that rejects efficiency claims when
@@ -359,6 +362,19 @@ This writes:
 ```text
 /tmp/adds_phase7_controller_portfolio/controller_portfolio_report.json
 /tmp/adds_phase7_controller_portfolio/controller_portfolio_rows.csv
+```
+
+Run the controller-robustness portfolio report:
+
+```bash
+python3 -B -m adds_sim.run_controller_robustness_portfolio /tmp/adds_phase7_controller_robustness
+```
+
+This writes:
+
+```text
+/tmp/adds_phase7_controller_robustness/controller_robustness_portfolio_report.json
+/tmp/adds_phase7_controller_robustness/controller_robustness_portfolio_rows.csv
 ```
 
 Run the Phase 7A Streamlit visualization prototype:

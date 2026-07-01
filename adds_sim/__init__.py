@@ -6,7 +6,12 @@ from .comparison import PairedComparisonResult, run_paired_comparison
 from .controller_portfolio import (
     ControllerPortfolioAggregate,
     ControllerPortfolioReport,
+    ControllerRobustnessPortfolioAggregate,
+    ControllerRobustnessPortfolioReport,
+    ControllerRobustnessPortfolioRow,
     build_controller_portfolio_report,
+    build_controller_robustness_portfolio_report,
+    write_controller_robustness_portfolio_report,
     write_controller_portfolio_report,
 )
 from .controllers import (
@@ -84,6 +89,9 @@ __all__ = [
     "ConventionalBaselineController",
     "ControllerPortfolioAggregate",
     "ControllerPortfolioReport",
+    "ControllerRobustnessPortfolioAggregate",
+    "ControllerRobustnessPortfolioReport",
+    "ControllerRobustnessPortfolioRow",
     "CouplingParameters",
     "DashboardCatalogRow",
     "DashboardComparison",
@@ -132,6 +140,7 @@ __all__ = [
     "build_dashboard_controller_portfolio",
     "build_dashboard_sensitivity",
     "build_controller_portfolio_report",
+    "build_controller_robustness_portfolio_report",
     "collect_imitation_examples",
     "coast_is_feasible",
     "default_simulation_config",
@@ -151,5 +160,6 @@ __all__ = [
     "summarize_run",
     "train_behavioral_cloning_model",
     "write_robustness_report",
+    "write_controller_robustness_portfolio_report",
     "write_controller_portfolio_report",
 ]
