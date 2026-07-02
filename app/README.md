@@ -37,8 +37,8 @@ clearest first demonstration. You should see:
 - A sidebar with a scenario selector and an ADDS controller selector.
 - Three ADDS controller choices: `Rule-based ADDS`, `Offline-optimized ADDS`,
   and `Learned ADDS`.
-- Six tabs: project overview, scenario comparison, catalog summary, controller
-  portfolio, robustness, and downloads.
+- Seven tabs: project overview, scenario comparison, catalog summary,
+  controller portfolio, robustness portfolio, robustness, and downloads.
 - A project overview explaining the conventional baseline, adaptive vehicle,
   fair comparison method, and operating modes.
 - Metric cards showing fuel delta, relative fuel change, RMS speed-error delta,
@@ -58,12 +58,15 @@ clearest first demonstration. You should see:
 - A catalog summary table and fuel-change bar chart across all scenarios.
 - A controller portfolio view comparing rule-based, offline-optimized, and
   learned ADDS across the full scenario catalog.
+- A robustness portfolio view comparing the same controllers across all default
+  mass, drag, rolling-resistance, grip, and grade perturbations.
 - A robustness view that repeats the selected scenario under payload, drag,
   rolling-resistance, grip, and grade perturbations.
 - Robustness charts showing fuel sensitivity and the fuel-versus-speed-tracking
   acceptance region.
 - Download buttons for the current trajectory CSV, current summary JSON, full
-  catalog summary, controller portfolio, and selected sensitivity CSV files.
+  catalog summary, controller portfolio, controller robustness portfolio, and
+  selected sensitivity CSV files.
 
 If you choose `train_constant_speed_cruise`, the curves can look almost
 identical. That is expected: the scenario has no useful coasting opportunity.

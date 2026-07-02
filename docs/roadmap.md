@@ -210,6 +210,8 @@ results inspectable before real-time integration work begins.
   comparison as JSON and CSV artifacts.
 - Add a command-line controller-robustness portfolio report for comparing all
   controller variants across the deterministic perturbation envelope.
+- Visualize the controller-robustness portfolio in the dashboard with
+  acceptance-rate, per-scenario, and perturbation-level charts.
 - Add scenario-level robustness envelopes with per-perturbation verdicts,
   acceptance rates, trade-off plots, and CSV export.
 - Keep visualization code separate from the simulator core so automated tests do
@@ -224,6 +226,7 @@ results inspectable before real-time integration work begins.
 - Controller-portfolio summary and CSV export.
 - Reproducible controller-portfolio report artifacts.
 - Reproducible controller-robustness portfolio report artifacts.
+- Dashboard controller-robustness portfolio view.
 - Tests for dashboard comparison packaging and metric-card generation.
 - Documented initial acceptance gates and verdict classification tests.
 - Interactive sensitivity view for the deterministic uncertainty envelope.

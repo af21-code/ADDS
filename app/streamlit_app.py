@@ -16,6 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from adds_sim.controller_portfolio import build_controller_robustness_portfolio_report
 from adds_sim.visualization import (
     MODE_ORDER,
     available_dashboard_scenarios,
@@ -54,6 +55,11 @@ def _controller_portfolio():
 
 
 @st.cache_data(show_spinner=True)
+def _controller_robustness_portfolio():
+    return build_controller_robustness_portfolio_report()
+
+
+@st.cache_data(show_spinner=True)
 def _sensitivity_summary(scenario_id: str, controller_kind: str):
     return build_dashboard_sensitivity(scenario_id, controller_kind)
 
@@ -68,6 +74,16 @@ def _catalog_frame(controller_kind: str) -> pd.DataFrame:
 
 def _controller_portfolio_frame() -> pd.DataFrame:
     return pd.DataFrame(asdict(row) for row in _controller_portfolio())
+
+
+def _controller_robustness_portfolio_frame() -> pd.DataFrame:
+    report = _controller_robustness_portfolio()
+    return pd.DataFrame(asdict(row) for row in report.rows)
+
+
+def _controller_robustness_aggregate_frame() -> pd.DataFrame:
+    report = _controller_robustness_portfolio()
+    return pd.DataFrame(asdict(aggregate) for aggregate in report.aggregates)
 
 
 def _mode_duration_frame(comparison) -> pd.DataFrame:
@@ -220,6 +236,77 @@ def _controller_portfolio_acceptance_chart(portfolio_df: pd.DataFrame):
     fig.update_yaxes(range=[0, 100])
     fig.update_traces(texttemplate="%{text} accepted", textposition="outside")
     fig.update_layout(margin=dict(l=10, r=10, t=50, b=10), xaxis_tickangle=-20)
+    return fig
+
+
+def _controller_robustness_acceptance_chart(aggregate_df: pd.DataFrame):
+    fig = px.bar(
+        aggregate_df,
+        x="controller_label",
+        y="acceptance_rate_percent",
+        text="accepted_efficiency_claims",
+        title="Robustness Acceptance Rate By Controller",
+        labels={
+            "controller_label": "ADDS controller",
+            "acceptance_rate_percent": "Acceptance rate [%]",
+            "accepted_efficiency_claims": "Accepted runs",
+        },
+    )
+    fig.update_yaxes(range=[0, 100])
+    fig.update_traces(texttemplate="%{text} accepted", textposition="outside")
+    fig.update_layout(margin=dict(l=10, r=10, t=50, b=10), xaxis_tickangle=-20)
+    return fig
+
+
+def _controller_robustness_heatmap(robustness_df: pd.DataFrame):
+    heatmap_df = (
+        robustness_df.groupby(["scenario_id", "controller_label"], as_index=False)
+        .agg(acceptance_rate_percent=("efficiency_claim_accepted", "mean"))
+    )
+    heatmap_df["acceptance_rate_percent"] *= 100.0
+    matrix = heatmap_df.pivot(
+        index="scenario_id",
+        columns="controller_label",
+        values="acceptance_rate_percent",
+    )
+    fig = px.imshow(
+        matrix,
+        aspect="auto",
+        color_continuous_scale="Greens",
+        zmin=0.0,
+        zmax=100.0,
+        title="Per-Scenario Robustness Acceptance Rate",
+        labels={
+            "x": "ADDS controller",
+            "y": "Scenario",
+            "color": "Acceptance [%]",
+        },
+    )
+    fig.update_layout(margin=dict(l=10, r=10, t=50, b=10))
+    return fig
+
+
+def _controller_robustness_fuel_chart(robustness_df: pd.DataFrame):
+    summary_df = (
+        robustness_df.groupby(["controller_label", "perturbation"], as_index=False)
+        .agg(mean_relative_fuel_change=("relative_fuel_change", "mean"))
+    )
+    fig = px.bar(
+        summary_df,
+        x="perturbation",
+        y="mean_relative_fuel_change",
+        color="controller_label",
+        barmode="group",
+        title="Mean Fuel Change By Perturbation",
+        labels={
+            "perturbation": "Perturbation",
+            "mean_relative_fuel_change": "Mean relative fuel change [%]",
+            "controller_label": "ADDS controller",
+        },
+    )
+    fig.add_hline(y=0.0, line_dash="dot", line_color="black")
+    fig.add_hline(y=-1.0, line_dash="dash", line_color="green")
+    fig.update_layout(margin=dict(l=10, r=10, t=50, b=10), xaxis_tickangle=-30)
     return fig
 
 
@@ -497,6 +584,78 @@ def _render_controller_portfolio_tab(portfolio_df: pd.DataFrame) -> None:
     )
 
 
+def _render_controller_robustness_portfolio_tab(
+    robustness_df: pd.DataFrame,
+    robustness_aggregate_df: pd.DataFrame,
+) -> None:
+    st.subheader("Controller Robustness Portfolio")
+    st.write(
+        "This view repeats every catalog scenario across the default deterministic "
+        "perturbation envelope for every ADDS controller. It checks whether a "
+        "controller advantage survives payload, drag, rolling-resistance, grip, "
+        "and grade shifts."
+    )
+
+    metric_columns = st.columns(3)
+    with metric_columns[0]:
+        st.metric("Robustness runs", f"{len(robustness_df)}")
+    with metric_columns[1]:
+        st.metric("Perturbations", f"{robustness_df['perturbation'].nunique()}")
+    with metric_columns[2]:
+        st.metric("Controllers", f"{robustness_df['controller_label'].nunique()}")
+
+    left, right = st.columns(2)
+    with left:
+        st.plotly_chart(
+            _controller_robustness_acceptance_chart(robustness_aggregate_df),
+            width="stretch",
+        )
+    with right:
+        st.plotly_chart(_controller_robustness_heatmap(robustness_df), width="stretch")
+
+    st.plotly_chart(_controller_robustness_fuel_chart(robustness_df), width="stretch")
+
+    st.dataframe(
+        robustness_aggregate_df[
+            [
+                "controller_label",
+                "run_count",
+                "accepted_efficiency_claims",
+                "acceptance_rate_percent",
+                "mean_relative_fuel_change",
+                "best_relative_fuel_change",
+                "worst_relative_fuel_change",
+                "maximum_rms_speed_error_delta_kmh",
+                "total_mode_transitions",
+                "maximum_safety_overrides",
+                "constraint_regression_count",
+            ]
+        ],
+        width="stretch",
+        hide_index=True,
+    )
+
+    with st.expander("Detailed robustness rows"):
+        st.dataframe(
+            robustness_df[
+                [
+                    "scenario_id",
+                    "split",
+                    "perturbation",
+                    "controller_label",
+                    "relative_fuel_change",
+                    "rms_speed_error_delta_kmh",
+                    "adds_transitions",
+                    "adds_safety_overrides",
+                    "verdict_code",
+                    "efficiency_claim_accepted",
+                ]
+            ],
+            width="stretch",
+            hide_index=True,
+        )
+
+
 def _render_robustness_tab(sensitivity, sensitivity_df: pd.DataFrame) -> None:
     st.subheader("Robustness And Sensitivity")
     st.write(
@@ -559,6 +718,7 @@ def _render_downloads_tab(
     df: pd.DataFrame,
     summary_df: pd.DataFrame,
     portfolio_df: pd.DataFrame,
+    robustness_portfolio_df: pd.DataFrame,
     sensitivity_df: pd.DataFrame,
 ) -> None:
     st.subheader("Downloads")
@@ -585,6 +745,12 @@ def _render_downloads_tab(
         label="Download controller portfolio CSV",
         data=portfolio_df.to_csv(index=False),
         file_name="adds_controller_portfolio.csv",
+        mime="text/csv",
+    )
+    st.download_button(
+        label="Download controller robustness portfolio CSV",
+        data=robustness_portfolio_df.to_csv(index=False),
+        file_name="adds_controller_robustness_portfolio.csv",
         mime="text/csv",
     )
     st.download_button(
@@ -651,15 +817,26 @@ def main() -> None:
     df = _records_frame(comparison)
     summary_df = _catalog_frame(controller_kind)
     portfolio_df = _controller_portfolio_frame()
+    robustness_portfolio_df = _controller_robustness_portfolio_frame()
+    robustness_aggregate_df = _controller_robustness_aggregate_frame()
     sensitivity = _sensitivity_summary(selected.scenario_id, controller_kind)
     sensitivity_df = _sensitivity_frame(sensitivity)
 
-    overview_tab, comparison_tab, catalog_tab, portfolio_tab, robustness_tab, downloads_tab = st.tabs(
+    (
+        overview_tab,
+        comparison_tab,
+        catalog_tab,
+        portfolio_tab,
+        robustness_portfolio_tab,
+        robustness_tab,
+        downloads_tab,
+    ) = st.tabs(
         (
             "Project Overview",
             "Scenario Comparison",
             "Catalog Summary",
             "Controller Portfolio",
+            "Robustness Portfolio",
             "Robustness",
             "Downloads",
         )
@@ -672,10 +849,22 @@ def main() -> None:
         _render_catalog_tab(summary_df)
     with portfolio_tab:
         _render_controller_portfolio_tab(portfolio_df)
+    with robustness_portfolio_tab:
+        _render_controller_robustness_portfolio_tab(
+            robustness_portfolio_df,
+            robustness_aggregate_df,
+        )
     with robustness_tab:
         _render_robustness_tab(sensitivity, sensitivity_df)
     with downloads_tab:
-        _render_downloads_tab(comparison, df, summary_df, portfolio_df, sensitivity_df)
+        _render_downloads_tab(
+            comparison,
+            df,
+            summary_df,
+            portfolio_df,
+            robustness_portfolio_df,
+            sensitivity_df,
+        )
 
     st.caption(
         "This prototype is for research visualization only. Simulation results "

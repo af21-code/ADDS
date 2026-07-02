@@ -247,6 +247,8 @@ The Python simulator now provides:
   timing.
 - Dashboard robustness envelopes for payload, resistance, grip, and grade
   perturbations, with per-run research verdicts.
+- Dashboard controller-robustness portfolio charts for comparing all ADDS
+  controller variants across the full deterministic perturbation envelope.
 - Physical logging and summary metrics.
 - Unit tests for the initial Phase 1 through Phase 7A acceptance cases.
 
@@ -387,7 +389,8 @@ python3 -m streamlit run app/streamlit_app.py --server.address localhost
 The dashboard lets you select a catalog scenario, compare the conventional
 baseline against the rule-based, offline-optimized, or learned ADDS controller,
 inspect speed, fuel, engine-speed, coupling-mode, and slip-energy curves side
-by side, and review a controller portfolio matrix across the full catalog.
+by side, and review controller portfolio and robustness portfolio matrices
+across the full catalog.
 
 ## License
 
