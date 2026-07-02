@@ -28,6 +28,8 @@ def main() -> None:
             f"accepted={aggregate.accepted_efficiency_claims}/{aggregate.scenario_count}, "
             f"mean_relative_fuel_change={aggregate.mean_relative_fuel_change:.3f}%"
         )
+    for insight in report.insights:
+        print(f"insight[{insight.severity}]: {insight.title} - {insight.message}")
 
 
 if __name__ == "__main__":

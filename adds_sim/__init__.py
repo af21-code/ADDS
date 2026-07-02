@@ -5,6 +5,7 @@ from .benchmarks import benchmark_scenarios
 from .comparison import PairedComparisonResult, run_paired_comparison
 from .controller_portfolio import (
     ControllerPortfolioAggregate,
+    ControllerPortfolioInsight,
     ControllerPortfolioReport,
     ControllerRobustnessPortfolioAggregate,
     ControllerRobustnessPortfolioReport,
@@ -88,6 +89,7 @@ __all__ = [
     "ConstantProfile",
     "ConventionalBaselineController",
     "ControllerPortfolioAggregate",
+    "ControllerPortfolioInsight",
     "ControllerPortfolioReport",
     "ControllerRobustnessPortfolioAggregate",
     "ControllerRobustnessPortfolioReport",

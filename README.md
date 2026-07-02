@@ -239,6 +239,8 @@ The Python simulator now provides:
   cross-controller matrix outside the dashboard.
 - A reproducible controller-robustness portfolio report that compares all ADDS
   controller variants across the default perturbation envelope.
+- Automatic controller-portfolio insights that identify the current leading
+  controller, its margin, and whether the result remains condition-dependent.
 - Automatic dashboard insights that summarize fuel benefit, state transitions,
   speed-tracking impact, and safety signals for the selected scenario.
 - An explicit dashboard research verdict that rejects efficiency claims when

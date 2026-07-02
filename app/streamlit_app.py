@@ -16,13 +16,15 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from adds_sim.controller_portfolio import build_controller_robustness_portfolio_report
+from adds_sim.controller_portfolio import (
+    build_controller_portfolio_report,
+    build_controller_robustness_portfolio_report,
+)
 from adds_sim.visualization import (
     MODE_ORDER,
     available_dashboard_scenarios,
     build_dashboard_catalog_summary,
     build_dashboard_comparison,
-    build_dashboard_controller_portfolio,
     build_dashboard_sensitivity,
 )
 
@@ -51,7 +53,7 @@ def _catalog_summary(controller_kind: str):
 
 @st.cache_data(show_spinner=True)
 def _controller_portfolio():
-    return build_dashboard_controller_portfolio()
+    return build_controller_portfolio_report()
 
 
 @st.cache_data(show_spinner=True)
@@ -73,7 +75,12 @@ def _catalog_frame(controller_kind: str) -> pd.DataFrame:
 
 
 def _controller_portfolio_frame() -> pd.DataFrame:
-    return pd.DataFrame(asdict(row) for row in _controller_portfolio())
+    report = _controller_portfolio()
+    return pd.DataFrame(asdict(row) for row in report.rows)
+
+
+def _controller_portfolio_insights():
+    return _controller_portfolio().insights
 
 
 def _controller_robustness_portfolio_frame() -> pd.DataFrame:
@@ -84,6 +91,10 @@ def _controller_robustness_portfolio_frame() -> pd.DataFrame:
 def _controller_robustness_aggregate_frame() -> pd.DataFrame:
     report = _controller_robustness_portfolio()
     return pd.DataFrame(asdict(aggregate) for aggregate in report.aggregates)
+
+
+def _controller_robustness_insights():
+    return _controller_robustness_portfolio().insights
 
 
 def _mode_duration_frame(comparison) -> pd.DataFrame:
@@ -559,6 +570,7 @@ def _render_controller_portfolio_tab(portfolio_df: pd.DataFrame) -> None:
         "wins only in one hand-picked case or remains comparable across the "
         "full current catalog."
     )
+    _render_insight_cards(_controller_portfolio_insights())
     left, right = st.columns(2)
     with left:
         st.plotly_chart(_controller_portfolio_fuel_chart(portfolio_df), width="stretch")
@@ -595,6 +607,7 @@ def _render_controller_robustness_portfolio_tab(
         "controller advantage survives payload, drag, rolling-resistance, grip, "
         "and grade shifts."
     )
+    _render_insight_cards(_controller_robustness_insights())
 
     metric_columns = st.columns(3)
     with metric_columns[0]:
@@ -654,6 +667,17 @@ def _render_controller_robustness_portfolio_tab(
             width="stretch",
             hide_index=True,
         )
+
+
+def _render_insight_cards(insights) -> None:
+    for insight in insights:
+        text = f"**{insight.title}**  \n{insight.message}"
+        if insight.severity == "positive":
+            st.success(text)
+        elif insight.severity == "caution":
+            st.warning(text)
+        else:
+            st.info(text)
 
 
 def _render_robustness_tab(sensitivity, sensitivity_df: pd.DataFrame) -> None:

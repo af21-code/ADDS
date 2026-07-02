@@ -30,6 +30,8 @@ class Phase7ControllerPortfolioReportTests(unittest.TestCase):
         self.assertTrue(
             all(aggregate.scenario_count == len(self.entries) for aggregate in report.aggregates)
         )
+        self.assertTrue(report.insights)
+        self.assertIn("Offline-optimized ADDS", report.insights[0].message)
 
     def test_report_preserves_optimized_frozen_test_result(self) -> None:
         report = build_controller_portfolio_report(entries=self.entries)
@@ -60,6 +62,7 @@ class Phase7ControllerPortfolioReportTests(unittest.TestCase):
             self.assertEqual(data["scenario_count"], 2)
             self.assertEqual(data["row_count"], 6)
             self.assertEqual(len(data["aggregates"]), 3)
+            self.assertTrue(data["insights"])
 
             with csv_path.open(newline="", encoding="utf-8") as file:
                 rows = list(csv.DictReader(file))
@@ -76,6 +79,7 @@ class Phase7ControllerPortfolioReportTests(unittest.TestCase):
         self.assertEqual(len(report.rows), 2 * 3 * 8)
         self.assertEqual(len(report.aggregates), 3)
         self.assertTrue(all(aggregate.run_count == 16 for aggregate in report.aggregates))
+        self.assertTrue(report.insights)
 
     def test_robustness_report_preserves_nominal_optimized_gain(self) -> None:
         report = build_controller_robustness_portfolio_report(entries=self.entries)
@@ -91,6 +95,7 @@ class Phase7ControllerPortfolioReportTests(unittest.TestCase):
             high_speed_nominal["rule_based"].relative_fuel_change - 0.5,
         )
         self.assertEqual(high_speed_nominal["offline_optimized"].adds_safety_overrides, 0)
+        self.assertIn("Offline-optimized ADDS", report.insights[0].message)
 
     def test_writes_json_and_csv_controller_robustness_portfolio_report(self) -> None:
         report = build_controller_robustness_portfolio_report(entries=self.entries[:1])
@@ -106,6 +111,7 @@ class Phase7ControllerPortfolioReportTests(unittest.TestCase):
             self.assertEqual(data["scenario_count"], 1)
             self.assertEqual(data["perturbation_count"], 8)
             self.assertEqual(data["row_count"], 24)
+            self.assertTrue(data["insights"])
 
             with csv_path.open(newline="", encoding="utf-8") as file:
                 rows = list(csv.DictReader(file))

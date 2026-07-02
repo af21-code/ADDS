@@ -60,6 +60,8 @@ clearest first demonstration. You should see:
   learned ADDS across the full scenario catalog.
 - A robustness portfolio view comparing the same controllers across all default
   mass, drag, rolling-resistance, grip, and grade perturbations.
+- Automatic portfolio insight cards identifying the current leading controller
+  and whether the result is still condition-dependent.
 - A robustness view that repeats the selected scenario under payload, drag,
   rolling-resistance, grip, and grade perturbations.
 - Robustness charts showing fuel sensitivity and the fuel-versus-speed-tracking

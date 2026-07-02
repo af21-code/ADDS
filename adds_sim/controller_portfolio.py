@@ -36,6 +36,15 @@ class ControllerPortfolioAggregate:
 
 
 @dataclass(frozen=True)
+class ControllerPortfolioInsight:
+    """Human-readable interpretation of one controller portfolio report."""
+
+    severity: str
+    title: str
+    message: str
+
+
+@dataclass(frozen=True)
 class ControllerPortfolioReport:
     """Machine-readable controller comparison across all catalog scenarios."""
 
@@ -43,6 +52,7 @@ class ControllerPortfolioReport:
     scenario_count: int
     rows: tuple[DashboardControllerPortfolioRow, ...]
     aggregates: tuple[ControllerPortfolioAggregate, ...]
+    insights: tuple[ControllerPortfolioInsight, ...]
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -51,6 +61,7 @@ class ControllerPortfolioReport:
             "scenario_count": self.scenario_count,
             "row_count": len(self.rows),
             "aggregates": [asdict(aggregate) for aggregate in self.aggregates],
+            "insights": [asdict(insight) for insight in self.insights],
             "rows": [asdict(row) for row in self.rows],
         }
 
@@ -106,6 +117,7 @@ class ControllerRobustnessPortfolioReport:
     perturbation_count: int
     rows: tuple[ControllerRobustnessPortfolioRow, ...]
     aggregates: tuple[ControllerRobustnessPortfolioAggregate, ...]
+    insights: tuple[ControllerPortfolioInsight, ...]
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -115,6 +127,7 @@ class ControllerRobustnessPortfolioReport:
             "perturbation_count": self.perturbation_count,
             "row_count": len(self.rows),
             "aggregates": [asdict(aggregate) for aggregate in self.aggregates],
+            "insights": [asdict(insight) for insight in self.insights],
             "rows": [asdict(row) for row in self.rows],
         }
 
@@ -136,6 +149,7 @@ def build_controller_portfolio_report(
         scenario_count=len(catalog),
         rows=rows,
         aggregates=aggregates,
+        insights=_portfolio_insights(aggregates, scope_label="catalog"),
     )
 
 
@@ -189,6 +203,7 @@ def build_controller_robustness_portfolio_report(
         perturbation_count=len(perturbations),
         rows=tuple(rows),
         aggregates=aggregates,
+        insights=_portfolio_insights(aggregates, scope_label="robustness envelope"),
     )
 
 
@@ -316,3 +331,95 @@ def _aggregate_robustness_rows(
 
 def _controller_label(controller_kind: str) -> str:
     return DASHBOARD_CONTROLLER_LABELS.get(controller_kind, controller_kind)
+
+
+def _portfolio_insights(
+    aggregates: tuple[ControllerPortfolioAggregate | ControllerRobustnessPortfolioAggregate, ...],
+    scope_label: str,
+) -> tuple[ControllerPortfolioInsight, ...]:
+    if not aggregates:
+        return (
+            ControllerPortfolioInsight(
+                severity="neutral",
+                title="No controller results",
+                message=f"No controller results were available for the {scope_label}.",
+            ),
+        )
+
+    ranked = sorted(
+        aggregates,
+        key=lambda aggregate: (
+            -aggregate.acceptance_rate_percent,
+            aggregate.mean_relative_fuel_change,
+            aggregate.maximum_safety_overrides,
+            aggregate.constraint_regression_count,
+            aggregate.adds_controller_kind,
+        ),
+    )
+    leader = ranked[0]
+    total_runs = _aggregate_run_count(leader)
+    insights = [
+        ControllerPortfolioInsight(
+            severity="positive" if leader.accepted_efficiency_claims else "neutral",
+            title="Best current controller",
+            message=(
+                f"{leader.controller_label} leads the {scope_label} with "
+                f"{leader.accepted_efficiency_claims}/{total_runs} accepted efficiency "
+                f"claims and {leader.mean_relative_fuel_change:.3f}% mean relative "
+                "fuel change."
+            ),
+        )
+    ]
+
+    if len(ranked) > 1:
+        runner_up = ranked[1]
+        acceptance_gap = leader.acceptance_rate_percent - runner_up.acceptance_rate_percent
+        fuel_gap = leader.mean_relative_fuel_change - runner_up.mean_relative_fuel_change
+        insights.append(
+            ControllerPortfolioInsight(
+                severity="neutral",
+                title="Margin over next controller",
+                message=(
+                    f"Compared with {runner_up.controller_label}, the leader changes "
+                    f"acceptance rate by {acceptance_gap:.1f} percentage points and "
+                    f"mean fuel change by {fuel_gap:.3f} percentage points."
+                ),
+            )
+        )
+
+    if leader.acceptance_rate_percent < 50.0:
+        insights.append(
+            ControllerPortfolioInsight(
+                severity="caution",
+                title="Benefit remains condition-dependent",
+                message=(
+                    f"The leading controller accepts only {leader.acceptance_rate_percent:.1f}% "
+                    f"of {scope_label} runs, so the result is not yet broadly robust."
+                ),
+            )
+        )
+
+    if all(
+        aggregate.maximum_safety_overrides == 0 and aggregate.constraint_regression_count == 0
+        for aggregate in aggregates
+    ):
+        insights.append(
+            ControllerPortfolioInsight(
+                severity="positive",
+                title="No safety or constraint regression",
+                message=(
+                    "All compared controllers completed this portfolio without safety "
+                    "overrides or hard-constraint regressions."
+                ),
+            )
+        )
+
+    return tuple(insights)
+
+
+def _aggregate_run_count(
+    aggregate: ControllerPortfolioAggregate | ControllerRobustnessPortfolioAggregate,
+) -> int:
+    if isinstance(aggregate, ControllerRobustnessPortfolioAggregate):
+        return aggregate.run_count
+    return aggregate.scenario_count
