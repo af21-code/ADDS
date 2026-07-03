@@ -543,101 +543,226 @@ def _track_lap_animation_html(report) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {{
-      --bg: #071018;
-      --panel: rgba(10, 24, 36, 0.88);
-      --panel-strong: rgba(16, 36, 54, 0.96);
-      --border: rgba(136, 180, 210, 0.28);
-      --text: #ecf7ff;
-      --muted: #9db2c4;
-      --conventional: #7dd3fc;
-      --adds: #f8c14a;
-      --good: #58d68d;
+      --bg: #050911;
+      --panel: rgba(9, 18, 31, 0.86);
+      --panel-soft: rgba(255, 255, 255, 0.045);
+      --panel-strong: rgba(14, 28, 47, 0.96);
+      --border: rgba(151, 187, 214, 0.24);
+      --border-strong: rgba(169, 209, 235, 0.42);
+      --text: #f4f9ff;
+      --muted: #98adbf;
+      --subtle: #6f8293;
+      --conventional: #57c7ff;
+      --adds: #f6bd45;
+      --adds-soft: rgba(246, 189, 69, 0.16);
+      --good: #5ce1a8;
       --warn: #f4d03f;
-      --track: #1e303d;
-      --track-edge: #7894a8;
+      --track: #253340;
+      --track-edge: #8da2b1;
+      --grass: #10271f;
+      --kerb-red: #d95050;
     }}
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background:
-        radial-gradient(circle at 18% 18%, rgba(48, 145, 190, 0.25), transparent 28%),
-        radial-gradient(circle at 80% 22%, rgba(248, 193, 74, 0.16), transparent 30%),
-        linear-gradient(135deg, #061019 0%, #0c1823 48%, #071018 100%);
+      background: transparent;
       color: var(--text);
     }}
     .sim {{
-      min-height: 690px;
-      padding: 18px;
-      border: 1px solid var(--border);
-      border-radius: 18px;
+      min-height: 706px;
+      border: 1px solid var(--border-strong);
+      border-radius: 26px;
       overflow: hidden;
       position: relative;
+      background:
+        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+        radial-gradient(circle at 12% 14%, rgba(87, 199, 255, 0.24), transparent 28%),
+        radial-gradient(circle at 78% 9%, rgba(246, 189, 69, 0.16), transparent 34%),
+        linear-gradient(135deg, #06101c 0%, #0b1725 46%, #050911 100%);
+      background-size: 42px 42px, 42px 42px, auto, auto, auto;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.12),
+        0 28px 90px rgba(0, 0, 0, 0.38);
+    }}
+    .sim::before {{
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(120deg, rgba(255,255,255,0.08), transparent 28%, transparent 72%, rgba(246,189,69,0.06));
+      mix-blend-mode: screen;
     }}
     .topbar {{
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 14px;
+      gap: 18px;
+      padding: 20px 22px 16px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.015));
+      position: relative;
+      z-index: 1;
+    }}
+    .brand-row {{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+    }}
+    .mark {{
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      letter-spacing: -0.08em;
+      color: #06101c;
+      background: linear-gradient(135deg, var(--adds), #ffe39a);
+      box-shadow: 0 10px 30px rgba(246,189,69,0.28);
     }}
     h2 {{
-      margin: 0 0 5px;
-      font-size: 21px;
+      margin: 0;
+      font-size: 24px;
       line-height: 1.2;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.04em;
     }}
     .subtitle {{
       color: var(--muted);
       font-size: 13px;
       line-height: 1.45;
+      max-width: 620px;
+    }}
+    .status-row {{
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }}
+    .status {{
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 9px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: rgba(255,255,255,0.04);
+    }}
+    .status.live {{
+      color: #06101c;
+      background: var(--good);
+      border-color: transparent;
     }}
     .controls {{
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
       justify-content: flex-end;
+      min-width: 250px;
     }}
     button {{
       border: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.07);
+      background: rgba(255, 255, 255, 0.06);
       color: var(--text);
       border-radius: 999px;
-      padding: 8px 12px;
-      font-weight: 700;
+      padding: 9px 13px;
+      font-weight: 850;
       font-size: 12px;
       cursor: pointer;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
     }}
     button:hover, button.active {{
-      background: rgba(248, 193, 74, 0.18);
-      border-color: rgba(248, 193, 74, 0.7);
+      color: #06101c;
+      background: linear-gradient(135deg, var(--adds), #ffe39a);
+      border-color: transparent;
+    }}
+    .summary-strip {{
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 14px 22px 0;
+    }}
+    .summary-item {{
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.045);
+      border-radius: 16px;
+      padding: 11px 12px;
     }}
     .layout {{
+      position: relative;
+      z-index: 1;
       display: grid;
-      grid-template-columns: minmax(420px, 1fr) 320px;
-      gap: 16px;
+      grid-template-columns: minmax(520px, 1fr) 340px;
+      gap: 14px;
       align-items: stretch;
+      padding: 14px 22px 20px;
     }}
     .track-panel, .telemetry-panel {{
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.24);
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(18px);
     }}
     .track-panel {{
-      min-height: 520px;
-      padding: 12px;
+      min-height: 510px;
+      padding: 14px;
       position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 45%, rgba(25, 70, 55, 0.62), rgba(9, 18, 31, 0.88) 58%),
+        linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.012));
+    }}
+    .track-head {{
+      position: absolute;
+      top: 16px;
+      left: 18px;
+      right: 18px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      z-index: 2;
+      pointer-events: none;
+    }}
+    .track-title {{
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }}
+    .track-meta {{
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }}
+    .sector-list {{
+      text-align: right;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.65;
     }}
     svg {{
       display: block;
       width: 100%;
-      height: 500px;
+      height: 492px;
+    }}
+    .runoff {{
+      fill: none;
+      stroke: rgba(64, 95, 77, 0.5);
+      stroke-width: 86;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }}
     .track-shadow {{
       fill: none;
-      stroke: rgba(0, 0, 0, 0.36);
-      stroke-width: 52;
+      stroke: rgba(0, 0, 0, 0.44);
+      stroke-width: 58;
       stroke-linecap: round;
       stroke-linejoin: round;
       transform: translate(0, 5px);
@@ -645,32 +770,47 @@ def _track_lap_animation_html(report) -> str:
     .track-edge {{
       fill: none;
       stroke: var(--track-edge);
-      stroke-width: 48;
+      stroke-width: 52;
       stroke-linecap: round;
       stroke-linejoin: round;
     }}
     .track {{
       fill: none;
       stroke: var(--track);
-      stroke-width: 38;
+      stroke-width: 42;
       stroke-linecap: round;
       stroke-linejoin: round;
     }}
     .center-line {{
       fill: none;
       stroke: rgba(236, 247, 255, 0.42);
-      stroke-width: 2;
-      stroke-dasharray: 12 14;
+      stroke-width: 1.5;
+      stroke-dasharray: 10 15;
+      stroke-linecap: round;
+    }}
+    .kerb {{
+      fill: none;
+      stroke: var(--kerb-red);
+      stroke-width: 6;
+      stroke-dasharray: 10 12;
       stroke-linecap: round;
     }}
     .sector-dot {{
-      fill: rgba(236, 247, 255, 0.8);
+      fill: var(--adds);
       stroke: #061019;
       stroke-width: 2;
+      filter: drop-shadow(0 0 10px rgba(246,189,69,0.48));
+    }}
+    .sector-label {{
+      fill: rgba(244,249,255,0.78);
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }}
     .finish {{
       stroke: #ffffff;
-      stroke-width: 4;
+      stroke-width: 5;
       stroke-dasharray: 5 5;
     }}
     .car {{
@@ -678,10 +818,16 @@ def _track_lap_animation_html(report) -> str:
       transition: opacity 0.2s ease;
     }}
     .car-body {{
-      rx: 7;
-      ry: 7;
+      rx: 8;
+      ry: 8;
       stroke: rgba(255,255,255,0.88);
       stroke-width: 2;
+    }}
+    .car-wing {{
+      fill: rgba(5,9,17,0.74);
+    }}
+    .wheel {{
+      fill: #04070c;
     }}
     .car-label {{
       font-size: 11px;
@@ -695,16 +841,34 @@ def _track_lap_animation_html(report) -> str:
       padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
+    }}
+    .panel-heading {{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }}
+    .panel-heading strong {{
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }}
+    .signal {{
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--good);
+      box-shadow: 0 0 18px var(--good);
     }}
     .time-box {{
       background: var(--panel-strong);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 13px;
+      border-radius: 18px;
+      padding: 14px;
     }}
     .time-value {{
-      font-size: 34px;
+      font-size: 38px;
       font-weight: 850;
       letter-spacing: -0.04em;
     }}
@@ -720,11 +884,12 @@ def _track_lap_animation_html(report) -> str:
       height: 100%;
       width: 0%;
       background: linear-gradient(90deg, var(--conventional), var(--adds));
+      box-shadow: 0 0 18px rgba(246,189,69,0.35);
     }}
     .car-card {{
-      border-radius: 14px;
+      border-radius: 18px;
       padding: 12px;
-      background: rgba(255,255,255,0.055);
+      background: rgba(255,255,255,0.052);
       border: 1px solid var(--border);
     }}
     .car-card h3 {{
@@ -737,20 +902,23 @@ def _track_lap_animation_html(report) -> str:
     .pill {{
       border-radius: 999px;
       padding: 4px 8px;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 800;
       color: #061019;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }}
     .pill.conventional {{ background: var(--conventional); }}
     .pill.adds {{ background: var(--adds); }}
     .grid {{
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 9px;
+      gap: 8px;
     }}
     .metric {{
       background: rgba(0,0,0,0.18);
-      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.055);
+      border-radius: 12px;
       padding: 9px;
     }}
     .label {{
@@ -771,10 +939,10 @@ def _track_lap_animation_html(report) -> str:
       font-weight: 850;
     }}
     .gap {{
-      border-radius: 14px;
+      border-radius: 18px;
       padding: 12px;
       border: 1px solid rgba(248, 193, 74, 0.32);
-      background: rgba(248, 193, 74, 0.08);
+      background: linear-gradient(135deg, rgba(248, 193, 74, 0.12), rgba(87, 199, 255, 0.05));
     }}
     .legend {{
       position: absolute;
@@ -799,10 +967,52 @@ def _track_lap_animation_html(report) -> str:
       font-size: 12px;
       line-height: 1.45;
     }}
-    @media (max-width: 820px) {{
-      .topbar, .layout {{ display: block; }}
-      .controls {{ justify-content: flex-start; margin-top: 12px; }}
-      .track-panel {{ margin-bottom: 14px; min-height: 430px; }}
+    @media (max-width: 980px) {{
+      .topbar {{
+        display: block;
+      }}
+      .controls {{
+        justify-content: flex-start;
+        margin-top: 14px;
+        min-width: 0;
+      }}
+      .summary-strip {{
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }}
+      .summary-item {{
+        padding: 10px;
+      }}
+      .summary-item .value {{
+        font-size: 14px;
+      }}
+      .layout {{
+        display: block;
+      }}
+      .track-panel {{
+        margin-bottom: 14px;
+      }}
+      .telemetry-panel {{
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }}
+      .time-box, .gap {{
+        grid-column: span 2;
+      }}
+    }}
+    @media (max-width: 640px) {{
+      .summary-strip {{
+        display: block;
+      }}
+      .summary-item {{
+        margin-bottom: 8px;
+      }}
+      .telemetry-panel {{
+        display: flex;
+      }}
+      .time-box, .gap {{
+        grid-column: auto;
+      }}
+      .track-panel {{ min-height: 430px; }}
       svg {{ height: 390px; }}
     }}
   </style>
@@ -811,8 +1021,18 @@ def _track_lap_animation_html(report) -> str:
   <div class="sim">
     <div class="topbar">
       <div>
-        <h2>2D Live Track-Lap Simulator</h2>
-        <div class="subtitle">Two simulated vehicles replay the same distance-limited lap. The ADDS marker changes behavior as the drivetrain connects, decouples, rev-matches, and re-engages.</div>
+        <div class="brand-row">
+          <div class="mark">A</div>
+          <div>
+            <h2>ADDS Race Control</h2>
+            <div class="subtitle">Synchronized 2D replay of the conventional baseline and adaptive drivetrain strategy on the same reference circuit.</div>
+          </div>
+        </div>
+        <div class="status-row">
+          <span class="status live">Telemetry replay</span>
+          <span class="status">Simulation only</span>
+          <span class="status">Controller: {report.adds_controller_kind.replace("_", " ")}</span>
+        </div>
       </div>
       <div class="controls">
         <button id="play">Play</button>
@@ -822,23 +1042,67 @@ def _track_lap_animation_html(report) -> str:
         <button class="speed" data-speed="4">4x</button>
       </div>
     </div>
+    <div class="summary-strip">
+      <div class="summary-item">
+        <div class="label">Circuit</div>
+        <div class="value">3.00 km reference lap</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">Fuel delta</div>
+        <div class="value">{float(report.comparison.deltas["delta_fuel_used"]) * 1_000_000.0:.0f} ml</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">ADDS lap time</div>
+        <div class="value">{float(report.comparison.adds_summary["travel_time"]):.2f} s</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">Transitions</div>
+        <div class="value">{int(report.comparison.adds_summary["mode_transition_count"])}</div>
+      </div>
+    </div>
     <div class="layout">
       <div class="track-panel">
+        <div class="track-head">
+          <div>
+            <div class="track-title">Reference Circuit V1</div>
+            <div class="track-meta">Main straight, lift-off zones, technical sector, final acceleration.</div>
+          </div>
+          <div class="sector-list">
+            S1 high-speed lift<br />
+            S2 fast kink<br />
+            S3 technical sector
+          </div>
+        </div>
         <svg viewBox="0 0 760 520" role="img" aria-label="2D reference circuit animation">
+          <path id="circuit-runoff" class="runoff"></path>
           <path id="circuit-shadow" class="track-shadow"></path>
           <path id="circuit-edge" class="track-edge"></path>
           <path id="circuit" class="track"></path>
+          <path id="circuit-kerb" class="kerb"></path>
           <path id="circuit-center" class="center-line"></path>
           <line id="finish" class="finish" x1="126" y1="302" x2="176" y2="342"></line>
           <circle class="sector-dot" cx="450" cy="88" r="6"></circle>
           <circle class="sector-dot" cx="642" cy="272" r="6"></circle>
           <circle class="sector-dot" cx="430" cy="470" r="6"></circle>
+          <text class="sector-label" x="466" y="77">S1</text>
+          <text class="sector-label" x="658" y="260">S2</text>
+          <text class="sector-label" x="446" y="492">S3</text>
           <g id="car-conventional" class="car">
-            <rect class="car-body" x="-19" y="-10" width="38" height="20" fill="var(--conventional)"></rect>
+            <rect class="wheel" x="-16" y="-14" width="10" height="5" rx="2"></rect>
+            <rect class="wheel" x="6" y="-14" width="10" height="5" rx="2"></rect>
+            <rect class="wheel" x="-16" y="9" width="10" height="5" rx="2"></rect>
+            <rect class="wheel" x="6" y="9" width="10" height="5" rx="2"></rect>
+            <rect class="car-wing" x="-20" y="-12" width="40" height="4" rx="2"></rect>
+            <rect class="car-body" x="-19" y="-9" width="38" height="18" fill="var(--conventional)"></rect>
             <text class="car-label" x="0" y="0">C</text>
           </g>
           <g id="car-adds" class="car">
-            <rect class="car-body" x="-19" y="-10" width="38" height="20" fill="var(--adds)"></rect>
+            <rect class="wheel" x="-16" y="-14" width="10" height="5" rx="2"></rect>
+            <rect class="wheel" x="6" y="-14" width="10" height="5" rx="2"></rect>
+            <rect class="wheel" x="-16" y="9" width="10" height="5" rx="2"></rect>
+            <rect class="wheel" x="6" y="9" width="10" height="5" rx="2"></rect>
+            <rect class="car-wing" x="-20" y="-12" width="40" height="4" rx="2"></rect>
+            <rect class="car-body" x="-19" y="-9" width="38" height="18" fill="var(--adds)"></rect>
             <text class="car-label" x="0" y="0">A</text>
           </g>
         </svg>
@@ -849,6 +1113,10 @@ def _track_lap_animation_html(report) -> str:
         </div>
       </div>
       <div class="telemetry-panel">
+        <div class="panel-heading">
+          <strong>Live Telemetry</strong>
+          <span class="signal"></span>
+        </div>
         <div class="time-box">
           <div class="label">Simulation time</div>
           <div id="time" class="time-value">0.00 s</div>
@@ -888,7 +1156,7 @@ def _track_lap_animation_html(report) -> str:
       [662, 292], [590, 412], [442, 472], [265, 438], [128, 350], [150, 322]
     ];
     const pathD = "M " + points.map(p => p.join(" ")).join(" L ");
-    for (const id of ["circuit-shadow", "circuit-edge", "circuit", "circuit-center"]) {{
+    for (const id of ["circuit-runoff", "circuit-shadow", "circuit-edge", "circuit", "circuit-kerb", "circuit-center"]) {{
       document.getElementById(id).setAttribute("d", pathD);
     }}
 
@@ -1195,15 +1463,12 @@ def _render_catalog_tab(summary_df: pd.DataFrame) -> None:
 
 def _render_track_lap_tab(report, lap_df: pd.DataFrame, stats_df: pd.DataFrame) -> None:
     st.subheader("Reference Track Lap")
-    st.write(
-        "This prototype compares the conventional baseline and ADDS over the same "
-        "3 km distance-limited reference circuit. The lap is still longitudinal: "
-        "it uses straights, lift-off sectors, minimum-speed holds, and "
-        "reacceleration targets, but it does not yet model racing line, lateral "
-        "load transfer, or combined-slip tire behavior."
+    st.caption(
+        "Interactive longitudinal replay: both vehicles follow the same 3 km reference circuit. "
+        "Lateral dynamics and racing-line optimization are intentionally deferred."
     )
 
-    st.iframe(_track_lap_animation_html(report), height=720)
+    st.iframe(_track_lap_animation_html(report), height=780)
 
     comparison = report.comparison
     metric_columns = st.columns(4)
