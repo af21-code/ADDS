@@ -480,6 +480,561 @@ def _track_lap_summary_json(report) -> str:
     return json.dumps(payload, indent=2, sort_keys=True)
 
 
+def _track_lap_animation_payload(report) -> dict[str, object]:
+    conventional = _animation_records(report.comparison.conventional_result.records)
+    adds = _animation_records(report.comparison.adds_result.records)
+    lap_distance = float(report.scenario.distance_limit or 1.0)
+    return {
+        "trackName": report.track_name,
+        "controller": report.adds_controller_kind,
+        "lapDistance": lap_distance,
+        "conventional": conventional,
+        "adds": adds,
+        "maxTime": max(
+            conventional[-1]["time"] if conventional else 0.0,
+            adds[-1]["time"] if adds else 0.0,
+        ),
+        "stats": {stat.label: asdict(stat) for stat in report.stats},
+    }
+
+
+def _animation_records(records, sample_interval: float = 0.1) -> list[dict[str, float | str]]:
+    sampled: list[dict[str, float | str]] = []
+    next_sample_time = 0.0
+    for record in records:
+        time = float(record["time"])
+        if time + 1e-9 < next_sample_time and record is not records[-1]:
+            continue
+        sampled.append(
+            {
+                "time": time,
+                "distance": float(record["position"]),
+                "speed": float(record["vehicle_speed"]) * 3.6,
+                "targetSpeed": float(record["target_speed"]) * 3.6,
+                "fuel": float(record["engine_fuel_used"]) * 1_000_000.0,
+                "mode": str(record["coupling_mode"]),
+                "engineRpm": float(record["engine_speed"]) * 60.0 / (2.0 * 3.141592653589793),
+            }
+        )
+        next_sample_time = time + sample_interval
+    if records and sampled[-1]["time"] != float(records[-1]["time"]):
+        final = records[-1]
+        sampled.append(
+            {
+                "time": float(final["time"]),
+                "distance": float(final["position"]),
+                "speed": float(final["vehicle_speed"]) * 3.6,
+                "targetSpeed": float(final["target_speed"]) * 3.6,
+                "fuel": float(final["engine_fuel_used"]) * 1_000_000.0,
+                "mode": str(final["coupling_mode"]),
+                "engineRpm": float(final["engine_speed"]) * 60.0 / (2.0 * 3.141592653589793),
+            }
+        )
+    return sampled
+
+
+def _track_lap_animation_html(report) -> str:
+    payload = json.dumps(_track_lap_animation_payload(report))
+    return f"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {{
+      --bg: #071018;
+      --panel: rgba(10, 24, 36, 0.88);
+      --panel-strong: rgba(16, 36, 54, 0.96);
+      --border: rgba(136, 180, 210, 0.28);
+      --text: #ecf7ff;
+      --muted: #9db2c4;
+      --conventional: #7dd3fc;
+      --adds: #f8c14a;
+      --good: #58d68d;
+      --warn: #f4d03f;
+      --track: #1e303d;
+      --track-edge: #7894a8;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 18% 18%, rgba(48, 145, 190, 0.25), transparent 28%),
+        radial-gradient(circle at 80% 22%, rgba(248, 193, 74, 0.16), transparent 30%),
+        linear-gradient(135deg, #061019 0%, #0c1823 48%, #071018 100%);
+      color: var(--text);
+    }}
+    .sim {{
+      min-height: 690px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      position: relative;
+    }}
+    .topbar {{
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }}
+    h2 {{
+      margin: 0 0 5px;
+      font-size: 21px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }}
+    .subtitle {{
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }}
+    .controls {{
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }}
+    button {{
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+    }}
+    button:hover, button.active {{
+      background: rgba(248, 193, 74, 0.18);
+      border-color: rgba(248, 193, 74, 0.7);
+    }}
+    .layout {{
+      display: grid;
+      grid-template-columns: minmax(420px, 1fr) 320px;
+      gap: 16px;
+      align-items: stretch;
+    }}
+    .track-panel, .telemetry-panel {{
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.24);
+    }}
+    .track-panel {{
+      min-height: 520px;
+      padding: 12px;
+      position: relative;
+    }}
+    svg {{
+      display: block;
+      width: 100%;
+      height: 500px;
+    }}
+    .track-shadow {{
+      fill: none;
+      stroke: rgba(0, 0, 0, 0.36);
+      stroke-width: 52;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transform: translate(0, 5px);
+    }}
+    .track-edge {{
+      fill: none;
+      stroke: var(--track-edge);
+      stroke-width: 48;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }}
+    .track {{
+      fill: none;
+      stroke: var(--track);
+      stroke-width: 38;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }}
+    .center-line {{
+      fill: none;
+      stroke: rgba(236, 247, 255, 0.42);
+      stroke-width: 2;
+      stroke-dasharray: 12 14;
+      stroke-linecap: round;
+    }}
+    .sector-dot {{
+      fill: rgba(236, 247, 255, 0.8);
+      stroke: #061019;
+      stroke-width: 2;
+    }}
+    .finish {{
+      stroke: #ffffff;
+      stroke-width: 4;
+      stroke-dasharray: 5 5;
+    }}
+    .car {{
+      filter: drop-shadow(0 8px 8px rgba(0,0,0,0.38));
+      transition: opacity 0.2s ease;
+    }}
+    .car-body {{
+      rx: 7;
+      ry: 7;
+      stroke: rgba(255,255,255,0.88);
+      stroke-width: 2;
+    }}
+    .car-label {{
+      font-size: 11px;
+      font-weight: 800;
+      fill: #061019;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }}
+    .telemetry-panel {{
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }}
+    .time-box {{
+      background: var(--panel-strong);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 13px;
+    }}
+    .time-value {{
+      font-size: 34px;
+      font-weight: 850;
+      letter-spacing: -0.04em;
+    }}
+    .progress {{
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.10);
+      overflow: hidden;
+      margin-top: 10px;
+    }}
+    .progress span {{
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--conventional), var(--adds));
+    }}
+    .car-card {{
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255,255,255,0.055);
+      border: 1px solid var(--border);
+    }}
+    .car-card h3 {{
+      margin: 0 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+    }}
+    .pill {{
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #061019;
+    }}
+    .pill.conventional {{ background: var(--conventional); }}
+    .pill.adds {{ background: var(--adds); }}
+    .grid {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }}
+    .metric {{
+      background: rgba(0,0,0,0.18);
+      border-radius: 10px;
+      padding: 9px;
+    }}
+    .label {{
+      color: var(--muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }}
+    .value {{
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }}
+    .mode-value {{
+      color: var(--adds);
+      font-size: 13px;
+      font-weight: 850;
+    }}
+    .gap {{
+      border-radius: 14px;
+      padding: 12px;
+      border: 1px solid rgba(248, 193, 74, 0.32);
+      background: rgba(248, 193, 74, 0.08);
+    }}
+    .legend {{
+      position: absolute;
+      left: 22px;
+      bottom: 22px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+      background: rgba(6, 16, 25, 0.72);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 8px 11px;
+      backdrop-filter: blur(10px);
+    }}
+    .key {{ display: inline-flex; align-items: center; gap: 6px; }}
+    .swatch {{ width: 10px; height: 10px; border-radius: 50%; }}
+    .note {{
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }}
+    @media (max-width: 820px) {{
+      .topbar, .layout {{ display: block; }}
+      .controls {{ justify-content: flex-start; margin-top: 12px; }}
+      .track-panel {{ margin-bottom: 14px; min-height: 430px; }}
+      svg {{ height: 390px; }}
+    }}
+  </style>
+</head>
+<body>
+  <div class="sim">
+    <div class="topbar">
+      <div>
+        <h2>2D Live Track-Lap Simulator</h2>
+        <div class="subtitle">Two simulated vehicles replay the same distance-limited lap. The ADDS marker changes behavior as the drivetrain connects, decouples, rev-matches, and re-engages.</div>
+      </div>
+      <div class="controls">
+        <button id="play">Play</button>
+        <button id="reset">Reset</button>
+        <button class="speed active" data-speed="1">1x</button>
+        <button class="speed" data-speed="2">2x</button>
+        <button class="speed" data-speed="4">4x</button>
+      </div>
+    </div>
+    <div class="layout">
+      <div class="track-panel">
+        <svg viewBox="0 0 760 520" role="img" aria-label="2D reference circuit animation">
+          <path id="circuit-shadow" class="track-shadow"></path>
+          <path id="circuit-edge" class="track-edge"></path>
+          <path id="circuit" class="track"></path>
+          <path id="circuit-center" class="center-line"></path>
+          <line id="finish" class="finish" x1="126" y1="302" x2="176" y2="342"></line>
+          <circle class="sector-dot" cx="450" cy="88" r="6"></circle>
+          <circle class="sector-dot" cx="642" cy="272" r="6"></circle>
+          <circle class="sector-dot" cx="430" cy="470" r="6"></circle>
+          <g id="car-conventional" class="car">
+            <rect class="car-body" x="-19" y="-10" width="38" height="20" fill="var(--conventional)"></rect>
+            <text class="car-label" x="0" y="0">C</text>
+          </g>
+          <g id="car-adds" class="car">
+            <rect class="car-body" x="-19" y="-10" width="38" height="20" fill="var(--adds)"></rect>
+            <text class="car-label" x="0" y="0">A</text>
+          </g>
+        </svg>
+        <div class="legend">
+          <span class="key"><span class="swatch" style="background: var(--conventional)"></span>Conventional</span>
+          <span class="key"><span class="swatch" style="background: var(--adds)"></span>ADDS</span>
+          <span class="key">Dashed line: racing reference centerline</span>
+        </div>
+      </div>
+      <div class="telemetry-panel">
+        <div class="time-box">
+          <div class="label">Simulation time</div>
+          <div id="time" class="time-value">0.00 s</div>
+          <div class="progress"><span id="progress"></span></div>
+        </div>
+        <div class="car-card">
+          <h3>Conventional <span class="pill conventional">baseline</span></h3>
+          <div class="grid">
+            <div class="metric"><div class="label">Speed</div><div id="c-speed" class="value">0.0 km/h</div></div>
+            <div class="metric"><div class="label">Fuel</div><div id="c-fuel" class="value">0 ml</div></div>
+            <div class="metric"><div class="label">Distance</div><div id="c-dist" class="value">0.00 km</div></div>
+            <div class="metric"><div class="label">Engine</div><div id="c-rpm" class="value">0 rpm</div></div>
+          </div>
+        </div>
+        <div class="car-card">
+          <h3>ADDS <span class="pill adds">adaptive</span></h3>
+          <div class="grid">
+            <div class="metric"><div class="label">Speed</div><div id="a-speed" class="value">0.0 km/h</div></div>
+            <div class="metric"><div class="label">Fuel</div><div id="a-fuel" class="value">0 ml</div></div>
+            <div class="metric"><div class="label">Distance</div><div id="a-dist" class="value">0.00 km</div></div>
+            <div class="metric"><div class="label">Engine</div><div id="a-rpm" class="value">0 rpm</div></div>
+          </div>
+          <div class="metric" style="margin-top:9px;"><div class="label">Coupling mode</div><div id="a-mode" class="mode-value">CONNECTED</div></div>
+        </div>
+        <div class="gap">
+          <div class="label">Live comparison</div>
+          <div class="value" id="gap">Gap: 0.00 s</div>
+          <div class="note" id="fuel-gap">Fuel delta: 0 ml</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const payload = {payload};
+    const points = [
+      [150, 322], [170, 195], [292, 108], [456, 88], [620, 166],
+      [662, 292], [590, 412], [442, 472], [265, 438], [128, 350], [150, 322]
+    ];
+    const pathD = "M " + points.map(p => p.join(" ")).join(" L ");
+    for (const id of ["circuit-shadow", "circuit-edge", "circuit", "circuit-center"]) {{
+      document.getElementById(id).setAttribute("d", pathD);
+    }}
+
+    const segmentLengths = [];
+    let totalPathLength = 0;
+    for (let i = 0; i < points.length - 1; i++) {{
+      const dx = points[i + 1][0] - points[i][0];
+      const dy = points[i + 1][1] - points[i][1];
+      const length = Math.hypot(dx, dy);
+      segmentLengths.push(length);
+      totalPathLength += length;
+    }}
+
+    function trackPoint(progress, laneOffset) {{
+      let distance = ((progress % 1) + 1) % 1 * totalPathLength;
+      for (let i = 0; i < segmentLengths.length; i++) {{
+        const length = segmentLengths[i];
+        if (distance <= length || i === segmentLengths.length - 1) {{
+          const t = length === 0 ? 0 : distance / length;
+          const p0 = points[i];
+          const p1 = points[i + 1];
+          const x = p0[0] + (p1[0] - p0[0]) * t;
+          const y = p0[1] + (p1[1] - p0[1]) * t;
+          const angle = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
+          const normalX = -Math.sin(angle);
+          const normalY = Math.cos(angle);
+          return {{
+            x: x + normalX * laneOffset,
+            y: y + normalY * laneOffset,
+            angle: angle * 180 / Math.PI
+          }};
+        }}
+        distance -= length;
+      }}
+      return {{ x: points[0][0], y: points[0][1], angle: 0 }};
+    }}
+
+    function interpolate(records, time) {{
+      if (!records.length) return null;
+      if (time <= records[0].time) return records[0];
+      if (time >= records[records.length - 1].time) return records[records.length - 1];
+      let lo = 0;
+      let hi = records.length - 1;
+      while (hi - lo > 1) {{
+        const mid = Math.floor((lo + hi) / 2);
+        if (records[mid].time <= time) lo = mid; else hi = mid;
+      }}
+      const a = records[lo];
+      const b = records[hi];
+      const f = (time - a.time) / Math.max(b.time - a.time, 1e-9);
+      return {{
+        time,
+        distance: a.distance + (b.distance - a.distance) * f,
+        speed: a.speed + (b.speed - a.speed) * f,
+        targetSpeed: a.targetSpeed + (b.targetSpeed - a.targetSpeed) * f,
+        fuel: a.fuel + (b.fuel - a.fuel) * f,
+        mode: f < 0.5 ? a.mode : b.mode,
+        engineRpm: a.engineRpm + (b.engineRpm - a.engineRpm) * f
+      }};
+    }}
+
+    let playing = false;
+    let simTime = 0;
+    let speed = 1;
+    let lastTimestamp = null;
+    const playButton = document.getElementById("play");
+    const resetButton = document.getElementById("reset");
+    const speedButtons = Array.from(document.querySelectorAll(".speed"));
+
+    playButton.addEventListener("click", () => {{
+      playing = !playing;
+      playButton.textContent = playing ? "Pause" : "Play";
+      lastTimestamp = null;
+    }});
+    resetButton.addEventListener("click", () => {{
+      playing = false;
+      simTime = 0;
+      playButton.textContent = "Play";
+      update();
+    }});
+    for (const button of speedButtons) {{
+      button.addEventListener("click", () => {{
+        speed = Number(button.dataset.speed);
+        speedButtons.forEach(item => item.classList.remove("active"));
+        button.classList.add("active");
+      }});
+    }}
+
+    function setText(id, value) {{
+      document.getElementById(id).textContent = value;
+    }}
+    function format(value, decimals = 1) {{
+      return Number(value).toFixed(decimals);
+    }}
+    function updateCar(id, state, offset) {{
+      const progress = Math.min(state.distance / payload.lapDistance, 1);
+      const p = trackPoint(progress, offset);
+      document.getElementById(id).setAttribute("transform", `translate(${{p.x}} ${{p.y}}) rotate(${{p.angle}})`);
+    }}
+    function update() {{
+      const c = interpolate(payload.conventional, simTime);
+      const a = interpolate(payload.adds, simTime);
+      if (!c || !a) return;
+      updateCar("car-conventional", c, -12);
+      updateCar("car-adds", a, 12);
+      setText("time", `${{format(simTime, 2)}} s`);
+      document.getElementById("progress").style.width = `${{Math.min(100, 100 * simTime / payload.maxTime)}}%`;
+      setText("c-speed", `${{format(c.speed, 1)}} km/h`);
+      setText("c-fuel", `${{format(c.fuel, 0)}} ml`);
+      setText("c-dist", `${{format(c.distance / 1000, 2)}} km`);
+      setText("c-rpm", `${{format(c.engineRpm, 0)}} rpm`);
+      setText("a-speed", `${{format(a.speed, 1)}} km/h`);
+      setText("a-fuel", `${{format(a.fuel, 0)}} ml`);
+      setText("a-dist", `${{format(a.distance / 1000, 2)}} km`);
+      setText("a-rpm", `${{format(a.engineRpm, 0)}} rpm`);
+      setText("a-mode", a.mode);
+      const distanceGap = c.distance - a.distance;
+      const roughGap = distanceGap / Math.max((c.speed + a.speed) / 7.2, 1);
+      setText("gap", `Distance gap: ${{format(distanceGap, 1)}} m (${{format(roughGap, 2)}} s approx.)`);
+      setText("fuel-gap", `Fuel delta: ${{format(a.fuel - c.fuel, 0)}} ml, target speed: ${{format(a.targetSpeed, 1)}} km/h`);
+    }}
+    function frame(timestamp) {{
+      if (playing) {{
+        if (lastTimestamp !== null) {{
+          simTime += (timestamp - lastTimestamp) / 1000 * speed;
+          if (simTime >= payload.maxTime) {{
+            simTime = payload.maxTime;
+            playing = false;
+            playButton.textContent = "Play";
+          }}
+        }}
+        lastTimestamp = timestamp;
+        update();
+      }} else {{
+        lastTimestamp = null;
+      }}
+      requestAnimationFrame(frame);
+    }}
+    update();
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
+"""
+
+
 def _render_project_overview() -> None:
     st.subheader("Project Overview")
     st.write(
@@ -647,6 +1202,8 @@ def _render_track_lap_tab(report, lap_df: pd.DataFrame, stats_df: pd.DataFrame) 
         "reacceleration targets, but it does not yet model racing line, lateral "
         "load transfer, or combined-slip tire behavior."
     )
+
+    st.iframe(_track_lap_animation_html(report), height=720)
 
     comparison = report.comparison
     metric_columns = st.columns(4)

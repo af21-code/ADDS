@@ -55,9 +55,11 @@ clearest first demonstration. You should see:
 - An ADDS coupling-mode timeline showing when the system is connected,
   decoupling, decoupled, rev-matching, and re-engaging.
 - A coupling slip-energy chart for re-engagement diagnostics.
-- A track-lap view that compares Conventional and ADDS on the same 3 km
-  reference circuit with lap time, fuel change, RMS speed error, decoupled
-  duration, mode timeline, and trajectory downloads.
+- A track-lap view with a 2D live simulator: two cars move around the same
+  reference circuit while real-time panels show speed, fuel, distance, engine
+  speed, ADDS coupling mode, and live gap.
+- Track-lap summary charts for lap time, fuel change, RMS speed error,
+  decoupled duration, mode timeline, and trajectory downloads.
 - A catalog summary table and fuel-change bar chart across all scenarios.
 - A controller portfolio view comparing rule-based, offline-optimized, and
   learned ADDS across the full scenario catalog.
