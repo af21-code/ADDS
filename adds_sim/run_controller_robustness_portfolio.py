@@ -46,6 +46,12 @@ def main() -> None:
             f"rejected={item.rejected_runs}/{item.controller_rejected_runs}, "
             f"share={item.rejection_share_percent:.1f}%"
         )
+    for recommendation in report.recommendations:
+        print(
+            "recommendation: "
+            f"{recommendation.priority}/{recommendation.verdict_code} - "
+            f"{recommendation.title}: {recommendation.message}"
+        )
 
 
 if __name__ == "__main__":

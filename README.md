@@ -244,6 +244,7 @@ The Python simulator now provides:
 - Robustness failure summaries that rank the most fragile scenario-controller
   pairs by rejected perturbations.
 - Robustness rejection breakdowns grouped by controller and verdict code.
+- Recommended next actions derived from robustness rejection patterns.
 - Automatic dashboard insights that summarize fuel benefit, state transitions,
   speed-tracking impact, and safety signals for the selected scenario.
 - An explicit dashboard research verdict that rejects efficiency claims when

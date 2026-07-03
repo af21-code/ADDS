@@ -103,6 +103,11 @@ def _controller_robustness_rejection_frame() -> pd.DataFrame:
     return pd.DataFrame(asdict(item) for item in report.rejection_breakdown)
 
 
+def _controller_robustness_recommendation_frame() -> pd.DataFrame:
+    report = _controller_robustness_portfolio()
+    return pd.DataFrame(asdict(item) for item in report.recommendations)
+
+
 def _controller_robustness_insights():
     return _controller_robustness_portfolio().insights
 
@@ -633,6 +638,7 @@ def _render_controller_robustness_portfolio_tab(
     robustness_aggregate_df: pd.DataFrame,
     robustness_failure_df: pd.DataFrame,
     robustness_rejection_df: pd.DataFrame,
+    robustness_recommendation_df: pd.DataFrame,
 ) -> None:
     st.subheader("Controller Robustness Portfolio")
     st.write(
@@ -723,6 +729,25 @@ def _render_controller_robustness_portfolio_tab(
                     "rejection_share_percent",
                     "affected_scenarios",
                     "affected_perturbations",
+                ]
+            ],
+            width="stretch",
+            hide_index=True,
+        )
+
+    st.subheader("Recommended Next Actions")
+    if robustness_recommendation_df.empty:
+        st.info("No robustness recommendations were generated.")
+    else:
+        st.dataframe(
+            robustness_recommendation_df[
+                [
+                    "priority",
+                    "verdict_code",
+                    "title",
+                    "message",
+                    "affected_controllers",
+                    "affected_scenarios",
                 ]
             ],
             width="stretch",
@@ -926,6 +951,7 @@ def main() -> None:
     robustness_aggregate_df = _controller_robustness_aggregate_frame()
     robustness_failure_df = _controller_robustness_failure_frame()
     robustness_rejection_df = _controller_robustness_rejection_frame()
+    robustness_recommendation_df = _controller_robustness_recommendation_frame()
     sensitivity = _sensitivity_summary(selected.scenario_id, controller_kind)
     sensitivity_df = _sensitivity_frame(sensitivity)
 
@@ -962,6 +988,7 @@ def main() -> None:
             robustness_aggregate_df,
             robustness_failure_df,
             robustness_rejection_df,
+            robustness_recommendation_df,
         )
     with robustness_tab:
         _render_robustness_tab(sensitivity, sensitivity_df)

@@ -140,6 +140,18 @@ class ControllerRobustnessRejectionBreakdown:
 
 
 @dataclass(frozen=True)
+class ControllerRobustnessRecommendation:
+    """Actionable recommendation derived from robustness rejection patterns."""
+
+    priority: str
+    verdict_code: str
+    title: str
+    message: str
+    affected_controllers: tuple[str, ...]
+    affected_scenarios: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ControllerRobustnessPortfolioReport:
     """Machine-readable cross-controller robustness report."""
 
@@ -151,6 +163,7 @@ class ControllerRobustnessPortfolioReport:
     insights: tuple[ControllerPortfolioInsight, ...]
     failure_summaries: tuple[ControllerRobustnessFailureSummary, ...]
     rejection_breakdown: tuple[ControllerRobustnessRejectionBreakdown, ...]
+    recommendations: tuple[ControllerRobustnessRecommendation, ...]
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -163,6 +176,7 @@ class ControllerRobustnessPortfolioReport:
             "insights": [asdict(insight) for insight in self.insights],
             "failure_summaries": [asdict(summary) for summary in self.failure_summaries],
             "rejection_breakdown": [asdict(item) for item in self.rejection_breakdown],
+            "recommendations": [asdict(item) for item in self.recommendations],
             "rows": [asdict(row) for row in self.rows],
         }
 
@@ -232,6 +246,7 @@ def build_controller_robustness_portfolio_report(
         _aggregate_robustness_rows(controller_kind, tuple(rows))
         for controller_kind in adds_controller_kinds
     )
+    rejection_breakdown = _robustness_rejection_breakdown(tuple(rows))
     return ControllerRobustnessPortfolioReport(
         controller_kinds=adds_controller_kinds,
         scenario_count=len(catalog),
@@ -240,7 +255,8 @@ def build_controller_robustness_portfolio_report(
         aggregates=aggregates,
         insights=_portfolio_insights(aggregates, scope_label="robustness envelope"),
         failure_summaries=_robustness_failure_summaries(tuple(rows)),
-        rejection_breakdown=_robustness_rejection_breakdown(tuple(rows)),
+        rejection_breakdown=rejection_breakdown,
+        recommendations=_robustness_recommendations(rejection_breakdown),
     )
 
 
@@ -459,6 +475,83 @@ def _robustness_rejection_breakdown(
             ),
         )
     )
+
+
+def _robustness_recommendations(
+    rejection_breakdown: tuple[ControllerRobustnessRejectionBreakdown, ...],
+) -> tuple[ControllerRobustnessRecommendation, ...]:
+    by_verdict: dict[str, list[ControllerRobustnessRejectionBreakdown]] = {}
+    for item in rejection_breakdown:
+        by_verdict.setdefault(item.verdict_code, []).append(item)
+
+    recommendations: list[ControllerRobustnessRecommendation] = []
+    for verdict_code, items in sorted(by_verdict.items()):
+        affected_controllers = tuple(sorted({item.controller_label for item in items}))
+        affected_scenarios = tuple(
+            sorted({scenario for item in items for scenario in item.affected_scenarios})
+        )
+        rejected_runs = sum(item.rejected_runs for item in items)
+        if verdict_code == "NO_MEANINGFUL_BENEFIT":
+            recommendations.append(
+                ControllerRobustnessRecommendation(
+                    priority="medium",
+                    verdict_code=verdict_code,
+                    title="Increase useful coast-opportunity coverage",
+                    message=(
+                        f"{rejected_runs} robustness runs were rejected because fuel benefit "
+                        "did not meet the acceptance gate. Prioritize additional realistic "
+                        "coast-opportunity scenarios and policy changes that improve benefit "
+                        "without changing safety gates."
+                    ),
+                    affected_controllers=affected_controllers,
+                    affected_scenarios=affected_scenarios,
+                )
+            )
+        elif verdict_code == "TRADE_OFF_REQUIRES_REVIEW":
+            recommendations.append(
+                ControllerRobustnessRecommendation(
+                    priority="high",
+                    verdict_code=verdict_code,
+                    title="Investigate speed-tracking trade-offs",
+                    message=(
+                        f"{rejected_runs} robustness runs degraded speed tracking beyond "
+                        "the comparability gate. Review preview timing, re-engagement timing, "
+                        "and controller aggressiveness before accepting fuel gains."
+                    ),
+                    affected_controllers=affected_controllers,
+                    affected_scenarios=affected_scenarios,
+                )
+            )
+        elif verdict_code == "REJECTED_SAFETY":
+            recommendations.append(
+                ControllerRobustnessRecommendation(
+                    priority="critical",
+                    verdict_code=verdict_code,
+                    title="Resolve safety or constraint regressions first",
+                    message=(
+                        f"{rejected_runs} robustness runs triggered safety or hard-constraint "
+                        "rejections. Do not tune for efficiency until these cases are explained "
+                        "and fixed."
+                    ),
+                    affected_controllers=affected_controllers,
+                    affected_scenarios=affected_scenarios,
+                )
+            )
+        else:
+            recommendations.append(
+                ControllerRobustnessRecommendation(
+                    priority="medium",
+                    verdict_code=verdict_code,
+                    title="Review rejected robustness verdict",
+                    message=(
+                        f"{rejected_runs} robustness runs were rejected with verdict "
+                        f"{verdict_code}. Review detailed rows before changing controller logic."
+                    ),
+                    affected_controllers=affected_controllers,
+                    affected_scenarios=affected_scenarios,
+                )
+            )
+    return tuple(recommendations)
 
 
 def _portfolio_insights(

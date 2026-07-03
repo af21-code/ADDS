@@ -66,6 +66,7 @@ clearest first demonstration. You should see:
   the most robustness perturbations.
 - A rejection-breakdown table and chart grouping rejected robustness runs by
   controller and verdict code.
+- A recommended-next-actions table derived from the rejection breakdown.
 - A robustness view that repeats the selected scenario under payload, drag,
   rolling-resistance, grip, and grade perturbations.
 - Robustness charts showing fuel sensitivity and the fuel-versus-speed-tracking
