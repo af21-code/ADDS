@@ -20,12 +20,14 @@ from adds_sim.controller_portfolio import (
     build_controller_portfolio_report,
     build_controller_robustness_portfolio_report,
 )
+from adds_sim.track_lap import run_track_lap_comparison
 from adds_sim.visualization import (
     MODE_ORDER,
     available_dashboard_scenarios,
     build_dashboard_catalog_summary,
     build_dashboard_comparison,
     build_dashboard_sensitivity,
+    records_for_dashboard,
 )
 
 
@@ -66,8 +68,23 @@ def _sensitivity_summary(scenario_id: str, controller_kind: str):
     return build_dashboard_sensitivity(scenario_id, controller_kind)
 
 
+@st.cache_data(show_spinner=True)
+def _track_lap_report(controller_kind: str):
+    return run_track_lap_comparison(controller_kind)
+
+
 def _records_frame(comparison) -> pd.DataFrame:
     return pd.DataFrame((*comparison.conventional_records, *comparison.adds_records))
+
+
+def _track_lap_records_frame(report) -> pd.DataFrame:
+    conventional = records_for_dashboard(report.comparison.conventional_result, "Conventional")
+    adds = records_for_dashboard(report.comparison.adds_result, "ADDS")
+    return pd.DataFrame((*conventional, *adds))
+
+
+def _track_lap_stats_frame(report) -> pd.DataFrame:
+    return pd.DataFrame(asdict(stat) for stat in report.stats)
 
 
 def _catalog_frame(controller_kind: str) -> pd.DataFrame:
@@ -441,6 +458,28 @@ def _summary_json(comparison) -> str:
     return json.dumps(payload, indent=2, sort_keys=True)
 
 
+def _track_lap_summary_json(report) -> str:
+    payload = {
+        "schema_version": report.schema_version,
+        "track_name": report.track_name,
+        "description": report.description,
+        "adds_controller_kind": report.adds_controller_kind,
+        "scenario": {
+            "scenario_id": report.scenario.scenario_id,
+            "initial_speed": report.scenario.initial_speed,
+            "initial_gear": report.scenario.initial_gear,
+            "time_limit": report.scenario.time_limit,
+            "distance_limit": report.scenario.distance_limit,
+        },
+        "sections": [asdict(section) for section in report.sections],
+        "conventional_summary": report.comparison.conventional_summary,
+        "adds_summary": report.comparison.adds_summary,
+        "deltas": report.comparison.deltas,
+        "stats": [asdict(stat) for stat in report.stats],
+    }
+    return json.dumps(payload, indent=2, sort_keys=True)
+
+
 def _render_project_overview() -> None:
     st.subheader("Project Overview")
     st.write(
@@ -597,6 +636,90 @@ def _render_catalog_tab(summary_df: pd.DataFrame) -> None:
         width="stretch",
         hide_index=True,
     )
+
+
+def _render_track_lap_tab(report, lap_df: pd.DataFrame, stats_df: pd.DataFrame) -> None:
+    st.subheader("Reference Track Lap")
+    st.write(
+        "This prototype compares the conventional baseline and ADDS over the same "
+        "3 km distance-limited reference circuit. The lap is still longitudinal: "
+        "it uses straights, lift-off sectors, minimum-speed holds, and "
+        "reacceleration targets, but it does not yet model racing line, lateral "
+        "load transfer, or combined-slip tire behavior."
+    )
+
+    comparison = report.comparison
+    metric_columns = st.columns(4)
+    key_stats = {
+        stat.label: stat
+        for stat in report.stats
+        if stat.label
+        in {
+            "Lap time",
+            "Relative fuel change",
+            "RMS speed error",
+            "Decoupled duration",
+        }
+    }
+    with metric_columns[0]:
+        stat = key_stats["Lap time"]
+        st.metric("ADDS lap time", f"{stat.adds_value:.2f} {stat.unit}", f"{stat.delta:.2f} {stat.unit}")
+    with metric_columns[1]:
+        stat = key_stats["Relative fuel change"]
+        st.metric("Fuel change", f"{stat.adds_value:.3f} {stat.unit}", f"{stat.delta:.3f} {stat.unit}")
+    with metric_columns[2]:
+        stat = key_stats["RMS speed error"]
+        st.metric("RMS speed error", f"{stat.adds_value:.3f} {stat.unit}", f"{stat.delta:.3f} {stat.unit}")
+    with metric_columns[3]:
+        stat = key_stats["Decoupled duration"]
+        st.metric("Decoupled duration", f"{stat.adds_value:.2f} {stat.unit}")
+
+    st.caption(
+        "The current reference result terminates by distance limit for both vehicles. "
+        f"Conventional: `{comparison.conventional_result.termination_reason}`; "
+        f"ADDS: `{comparison.adds_result.termination_reason}`."
+    )
+
+    left, right = st.columns(2)
+    with left:
+        st.plotly_chart(_speed_tracking_chart(lap_df), width="stretch")
+    with right:
+        st.plotly_chart(_line_chart(lap_df, "fuel_used_ml", "Track Lap Cumulative Fuel", "Fuel [ml]"), width="stretch")
+
+    left, right = st.columns(2)
+    with left:
+        st.plotly_chart(_mode_chart(lap_df), width="stretch")
+    with right:
+        st.plotly_chart(
+            _line_chart(lap_df, "coupling_slip_energy", "Track Lap Coupling Slip Energy", "Energy [J]"),
+            width="stretch",
+        )
+
+    st.subheader("Lap Statistics")
+    st.dataframe(stats_df, width="stretch", hide_index=True)
+
+    st.subheader("Reference Circuit Sections")
+    st.dataframe(
+        pd.DataFrame(asdict(section) for section in report.sections),
+        width="stretch",
+        hide_index=True,
+    )
+
+    left, right = st.columns(2)
+    with left:
+        st.download_button(
+            label="Download track-lap summary JSON",
+            data=_track_lap_summary_json(report),
+            file_name=f"{report.scenario.scenario_id}_{report.adds_controller_kind}_track_lap.json",
+            mime="application/json",
+        )
+    with right:
+        st.download_button(
+            label="Download track-lap trajectory CSV",
+            data=lap_df.to_csv(index=False),
+            file_name=f"{report.scenario.scenario_id}_{report.adds_controller_kind}_track_lap_trajectory.csv",
+            mime="text/csv",
+        )
 
 
 def _render_controller_portfolio_tab(portfolio_df: pd.DataFrame) -> None:
@@ -954,10 +1077,14 @@ def main() -> None:
     robustness_recommendation_df = _controller_robustness_recommendation_frame()
     sensitivity = _sensitivity_summary(selected.scenario_id, controller_kind)
     sensitivity_df = _sensitivity_frame(sensitivity)
+    track_lap_report = _track_lap_report(controller_kind)
+    track_lap_df = _track_lap_records_frame(track_lap_report)
+    track_lap_stats_df = _track_lap_stats_frame(track_lap_report)
 
     (
         overview_tab,
         comparison_tab,
+        track_lap_tab,
         catalog_tab,
         portfolio_tab,
         robustness_portfolio_tab,
@@ -967,6 +1094,7 @@ def main() -> None:
         (
             "Project Overview",
             "Scenario Comparison",
+            "Track Lap",
             "Catalog Summary",
             "Controller Portfolio",
             "Robustness Portfolio",
@@ -978,6 +1106,8 @@ def main() -> None:
         _render_project_overview()
     with comparison_tab:
         _render_comparison_tab(comparison, df)
+    with track_lap_tab:
+        _render_track_lap_tab(track_lap_report, track_lap_df, track_lap_stats_df)
     with catalog_tab:
         _render_catalog_tab(summary_df)
     with portfolio_tab:

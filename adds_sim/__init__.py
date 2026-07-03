@@ -60,6 +60,17 @@ from .robustness import (
 )
 from .scenario_catalog import ScenarioCatalogEntry, entries_by_split, phase4_scenario_catalog
 from .simulator import LongitudinalSimulator, Scenario, SimulationConfig, SimulationResult, VehicleState
+from .track_lap import (
+    TrackLapComparison,
+    TrackLapControllerKind,
+    TrackLapSection,
+    TrackLapStat,
+    build_reference_track_lap_scenario,
+    reference_track_lap_sections,
+    run_track_lap_comparison,
+    track_lap_stats,
+    write_track_lap_report,
+)
 from .visualization import (
     DashboardCatalogRow,
     DashboardComparison,
@@ -137,6 +148,10 @@ __all__ = [
     "SpeedTrackingController",
     "TrainingReport",
     "TransmissionParameters",
+    "TrackLapComparison",
+    "TrackLapControllerKind",
+    "TrackLapSection",
+    "TrackLapStat",
     "VehicleParameters",
     "VehicleState",
     "apply_perturbation_to_config",
@@ -149,6 +164,7 @@ __all__ = [
     "build_dashboard_sensitivity",
     "build_controller_portfolio_report",
     "build_controller_robustness_portfolio_report",
+    "build_reference_track_lap_scenario",
     "collect_imitation_examples",
     "coast_is_feasible",
     "default_simulation_config",
@@ -161,13 +177,17 @@ __all__ = [
     "mode_durations_seconds",
     "mode_transition_rows",
     "phase4_scenario_catalog",
+    "reference_track_lap_sections",
     "records_for_dashboard",
     "run_batch_evaluation",
     "run_paired_comparison",
+    "run_track_lap_comparison",
     "run_robustness_evaluation",
     "summarize_run",
     "train_behavioral_cloning_model",
+    "track_lap_stats",
     "write_robustness_report",
     "write_controller_robustness_portfolio_report",
     "write_controller_portfolio_report",
+    "write_track_lap_report",
 ]

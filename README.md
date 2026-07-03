@@ -115,8 +115,10 @@ constraints remain comparable.
 |   |-- run_controller_portfolio.py
 |   |-- run_controller_robustness_portfolio.py
 |   |-- run_robustness.py
+|   |-- run_track_lap.py
 |   |-- scenario_catalog.py
 |   |-- simulator.py
+|   |-- track_lap.py
 |   |-- train_imitation.py
 |   `-- visualization.py
 |-- docs
@@ -255,8 +257,13 @@ The Python simulator now provides:
   perturbations, with per-run research verdicts.
 - Dashboard controller-robustness portfolio charts for comparing all ADDS
   controller variants across the full deterministic perturbation envelope.
+- A first fixed-distance reference track-lap prototype for comparing a
+  conventional baseline against ADDS over repeated lift-off and reacceleration
+  sectors.
+- A dashboard Track Lap view for inspecting the same reference circuit through
+  side-by-side curves and downloadable artifacts.
 - Physical logging and summary metrics.
-- Unit tests for the initial Phase 1 through Phase 7A acceptance cases.
+- Unit tests for the initial Phase 1 through Phase 8 acceptance cases.
 
 Run the offline policy-search audit from the repository root:
 
@@ -358,6 +365,26 @@ This writes:
 /tmp/adds_phase6_robustness/robustness_report.json
 /tmp/adds_phase6_robustness/robustness_runs.csv
 ```
+
+Run the reference track-lap prototype:
+
+```bash
+python3 -B -m adds_sim.run_track_lap /tmp/adds_phase8_track_lap
+```
+
+This writes:
+
+```text
+/tmp/adds_phase8_track_lap/track_lap_report.json
+/tmp/adds_phase8_track_lap/track_lap_stats.csv
+/tmp/adds_phase8_track_lap/track_lap_conventional_trajectory.csv
+/tmp/adds_phase8_track_lap/track_lap_adds_trajectory.csv
+```
+
+The prototype is a longitudinal, fixed-distance reference lap. It is useful for
+comparing fuel use, lap time, speed tracking, mode transitions, decoupled
+duration, and re-engagement slip over the same 3 km circuit profile. It is not
+yet a full racing-line, tire-load-transfer, or lateral-dynamics track model.
 
 Run the controller-portfolio report:
 

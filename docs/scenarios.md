@@ -219,6 +219,36 @@ Expected behavior:
 - Conclusions should not depend on a single nominal vehicle.
 - Policies should fail conservatively outside supported ranges.
 
+### S10: Reference Track Lap
+
+Purpose:
+
+- Compare the conventional baseline and ADDS on the same fixed-distance
+  circuit-style profile.
+- Make repeated lift-off and reacceleration decisions easier to inspect than in
+  isolated drive-cycle snippets.
+
+Setup:
+
+- A 3 km distance-limited reference lap.
+- A time-domain target-speed profile with straights, lift-off sectors, corner
+  minimum-speed holds, and reacceleration sectors.
+- A distance-domain grade profile derived from the same section list.
+- The conventional baseline and ADDS controller use the same vehicle,
+  transmission, solver, target profile, and distance limit.
+
+Expected behavior:
+
+- Both vehicles should terminate on the same distance limit.
+- ADDS may decouple during gradual target-speed reductions when natural
+  coast-down remains inside the controller corridor.
+- The comparison must report lap time, fuel use, speed-tracking error,
+  decoupled duration, transition count, safety overrides, and coupling slip
+  energy.
+- The first implementation is longitudinal only; lateral load transfer, tire
+  combined slip, racing-line optimization, and closed-loop track driving are
+  deferred to higher-fidelity phases.
+
 ### S10: Invalid Observation Or Actuator Fault
 
 Purpose:

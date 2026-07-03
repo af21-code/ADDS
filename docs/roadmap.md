@@ -249,7 +249,39 @@ results inspectable before real-time integration work begins.
 - The interface clearly states that results are simulation-only research
   outputs, not real-vehicle claims.
 
-## Phase 7: Real-Time and Integration Research
+## Phase 8: Reference Track-Lap Prototype
+
+### Goals
+
+- Compare the conventional baseline and ADDS over the same fixed-distance
+  circuit-style profile.
+- Add repeated lift-off, corner minimum-speed, and reacceleration sectors so
+  drivetrain decoupling decisions can be inspected in a more intuitive
+  performance-driving context.
+- Report lap-level statistics that are easy to connect to later visualization:
+  lap time, fuel use, RMS speed error, transition count, decoupled duration,
+  safety overrides, and coupling slip energy.
+- Keep the first prototype longitudinal and deterministic before introducing
+  lateral dynamics, racing-line logic, or tire load-transfer modeling.
+
+### Deliverables
+
+- Reference track-lap scenario builder.
+- Conventional-vs-ADDS track-lap comparison helper.
+- Command-line report writer for JSON summary, stat CSV, and paired trajectory
+  CSV files.
+- Acceptance tests for the scenario contract, comparison behavior, and artifact
+  generation.
+
+### Exit Criteria
+
+- Both vehicles complete the same distance-limited reference lap.
+- Reported distance, fuel, timing, speed-tracking, mode-transition, and safety
+  metrics are reproducible.
+- The report clearly remains a simulation-only longitudinal prototype, not a
+  full vehicle-handling or racing simulator.
+
+## Phase 9: Real-Time and Integration Research
 
 This phase is optional and begins only after simulation validity is established.
 

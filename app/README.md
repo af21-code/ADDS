@@ -37,7 +37,7 @@ clearest first demonstration. You should see:
 - A sidebar with a scenario selector and an ADDS controller selector.
 - Three ADDS controller choices: `Rule-based ADDS`, `Offline-optimized ADDS`,
   and `Learned ADDS`.
-- Seven tabs: project overview, scenario comparison, catalog summary,
+- Eight tabs: project overview, scenario comparison, track lap, catalog summary,
   controller portfolio, robustness portfolio, robustness, and downloads.
 - A project overview explaining the conventional baseline, adaptive vehicle,
   fair comparison method, and operating modes.
@@ -55,6 +55,9 @@ clearest first demonstration. You should see:
 - An ADDS coupling-mode timeline showing when the system is connected,
   decoupling, decoupled, rev-matching, and re-engaging.
 - A coupling slip-energy chart for re-engagement diagnostics.
+- A track-lap view that compares Conventional and ADDS on the same 3 km
+  reference circuit with lap time, fuel change, RMS speed error, decoupled
+  duration, mode timeline, and trajectory downloads.
 - A catalog summary table and fuel-change bar chart across all scenarios.
 - A controller portfolio view comparing rule-based, offline-optimized, and
   learned ADDS across the full scenario catalog.
