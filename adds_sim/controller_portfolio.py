@@ -109,6 +109,37 @@ class ControllerRobustnessPortfolioAggregate:
 
 
 @dataclass(frozen=True)
+class ControllerRobustnessFailureSummary:
+    """Rejected-run summary for one scenario and ADDS controller."""
+
+    scenario_id: str
+    split: str
+    adds_controller_kind: str
+    controller_label: str
+    rejected_runs: int
+    total_runs: int
+    rejection_rate_percent: float
+    worst_relative_fuel_change: float
+    maximum_rms_speed_error_delta_kmh: float
+    verdict_codes: tuple[str, ...]
+    rejected_perturbations: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ControllerRobustnessRejectionBreakdown:
+    """Rejected-run counts grouped by ADDS controller and verdict code."""
+
+    adds_controller_kind: str
+    controller_label: str
+    verdict_code: str
+    rejected_runs: int
+    controller_rejected_runs: int
+    rejection_share_percent: float
+    affected_scenarios: tuple[str, ...]
+    affected_perturbations: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ControllerRobustnessPortfolioReport:
     """Machine-readable cross-controller robustness report."""
 
@@ -118,6 +149,8 @@ class ControllerRobustnessPortfolioReport:
     rows: tuple[ControllerRobustnessPortfolioRow, ...]
     aggregates: tuple[ControllerRobustnessPortfolioAggregate, ...]
     insights: tuple[ControllerPortfolioInsight, ...]
+    failure_summaries: tuple[ControllerRobustnessFailureSummary, ...]
+    rejection_breakdown: tuple[ControllerRobustnessRejectionBreakdown, ...]
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -128,6 +161,8 @@ class ControllerRobustnessPortfolioReport:
             "row_count": len(self.rows),
             "aggregates": [asdict(aggregate) for aggregate in self.aggregates],
             "insights": [asdict(insight) for insight in self.insights],
+            "failure_summaries": [asdict(summary) for summary in self.failure_summaries],
+            "rejection_breakdown": [asdict(item) for item in self.rejection_breakdown],
             "rows": [asdict(row) for row in self.rows],
         }
 
@@ -204,6 +239,8 @@ def build_controller_robustness_portfolio_report(
         rows=tuple(rows),
         aggregates=aggregates,
         insights=_portfolio_insights(aggregates, scope_label="robustness envelope"),
+        failure_summaries=_robustness_failure_summaries(tuple(rows)),
+        rejection_breakdown=_robustness_rejection_breakdown(tuple(rows)),
     )
 
 
@@ -331,6 +368,97 @@ def _aggregate_robustness_rows(
 
 def _controller_label(controller_kind: str) -> str:
     return DASHBOARD_CONTROLLER_LABELS.get(controller_kind, controller_kind)
+
+
+def _robustness_failure_summaries(
+    rows: tuple[ControllerRobustnessPortfolioRow, ...],
+) -> tuple[ControllerRobustnessFailureSummary, ...]:
+    grouped: dict[tuple[str, str], list[ControllerRobustnessPortfolioRow]] = {}
+    for row in rows:
+        grouped.setdefault((row.scenario_id, row.adds_controller_kind), []).append(row)
+
+    summaries: list[ControllerRobustnessFailureSummary] = []
+    for group_rows in grouped.values():
+        rejected_rows = tuple(row for row in group_rows if not row.efficiency_claim_accepted)
+        if not rejected_rows:
+            continue
+        total_runs = len(group_rows)
+        first = group_rows[0]
+        summaries.append(
+            ControllerRobustnessFailureSummary(
+                scenario_id=first.scenario_id,
+                split=first.split,
+                adds_controller_kind=first.adds_controller_kind,
+                controller_label=first.controller_label,
+                rejected_runs=len(rejected_rows),
+                total_runs=total_runs,
+                rejection_rate_percent=100.0 * len(rejected_rows) / total_runs,
+                worst_relative_fuel_change=max(row.relative_fuel_change for row in group_rows),
+                maximum_rms_speed_error_delta_kmh=max(
+                    row.rms_speed_error_delta_kmh for row in group_rows
+                ),
+                verdict_codes=tuple(sorted({row.verdict_code for row in rejected_rows})),
+                rejected_perturbations=tuple(sorted(row.perturbation for row in rejected_rows)),
+            )
+        )
+
+    return tuple(
+        sorted(
+            summaries,
+            key=lambda summary: (
+                -summary.rejection_rate_percent,
+                -summary.rejected_runs,
+                -summary.worst_relative_fuel_change,
+                -summary.maximum_rms_speed_error_delta_kmh,
+                summary.scenario_id,
+                summary.adds_controller_kind,
+            ),
+        )
+    )
+
+
+def _robustness_rejection_breakdown(
+    rows: tuple[ControllerRobustnessPortfolioRow, ...],
+) -> tuple[ControllerRobustnessRejectionBreakdown, ...]:
+    rejected_rows = tuple(row for row in rows if not row.efficiency_claim_accepted)
+    controller_rejection_counts: dict[str, int] = {}
+    grouped: dict[tuple[str, str], list[ControllerRobustnessPortfolioRow]] = {}
+    for row in rejected_rows:
+        controller_rejection_counts[row.adds_controller_kind] = (
+            controller_rejection_counts.get(row.adds_controller_kind, 0) + 1
+        )
+        grouped.setdefault((row.adds_controller_kind, row.verdict_code), []).append(row)
+
+    breakdown: list[ControllerRobustnessRejectionBreakdown] = []
+    for (controller_kind, verdict_code), group_rows in grouped.items():
+        controller_rejected_runs = controller_rejection_counts[controller_kind]
+        breakdown.append(
+            ControllerRobustnessRejectionBreakdown(
+                adds_controller_kind=controller_kind,
+                controller_label=group_rows[0].controller_label,
+                verdict_code=verdict_code,
+                rejected_runs=len(group_rows),
+                controller_rejected_runs=controller_rejected_runs,
+                rejection_share_percent=(
+                    100.0 * len(group_rows) / controller_rejected_runs
+                    if controller_rejected_runs
+                    else 0.0
+                ),
+                affected_scenarios=tuple(sorted({row.scenario_id for row in group_rows})),
+                affected_perturbations=tuple(sorted({row.perturbation for row in group_rows})),
+            )
+        )
+
+    return tuple(
+        sorted(
+            breakdown,
+            key=lambda item: (
+                item.adds_controller_kind,
+                -item.rejected_runs,
+                item.verdict_code,
+            ),
+        )
+    )
 
 
 def _portfolio_insights(

@@ -32,6 +32,20 @@ def main() -> None:
         )
     for insight in report.insights:
         print(f"insight[{insight.severity}]: {insight.title} - {insight.message}")
+    for summary in report.failure_summaries[:5]:
+        print(
+            "fragile_case: "
+            f"{summary.scenario_id}/{summary.adds_controller_kind} "
+            f"rejected={summary.rejected_runs}/{summary.total_runs}, "
+            f"verdicts={','.join(summary.verdict_codes)}"
+        )
+    for item in report.rejection_breakdown:
+        print(
+            "rejection_breakdown: "
+            f"{item.adds_controller_kind}/{item.verdict_code} "
+            f"rejected={item.rejected_runs}/{item.controller_rejected_runs}, "
+            f"share={item.rejection_share_percent:.1f}%"
+        )
 
 
 if __name__ == "__main__":

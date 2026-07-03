@@ -214,6 +214,9 @@ results inspectable before real-time integration work begins.
   acceptance-rate, per-scenario, and perturbation-level charts.
 - Add automatic portfolio insights for leader selection, controller margin, and
   condition-dependent benefit warnings.
+- Add robustness failure summaries that rank rejected perturbations by
+  scenario-controller pair.
+- Add robustness rejection breakdowns grouped by controller and verdict code.
 - Add scenario-level robustness envelopes with per-perturbation verdicts,
   acceptance rates, trade-off plots, and CSV export.
 - Keep visualization code separate from the simulator core so automated tests do
@@ -230,6 +233,8 @@ results inspectable before real-time integration work begins.
 - Reproducible controller-robustness portfolio report artifacts.
 - Dashboard controller-robustness portfolio view.
 - Automatic portfolio insight cards and serialized report insights.
+- Most-fragile-case tables for dashboard and JSON report review.
+- Rejection-breakdown charts and serialized verdict-code summaries.
 - Tests for dashboard comparison packaging and metric-card generation.
 - Documented initial acceptance gates and verdict classification tests.
 - Interactive sensitivity view for the deterministic uncertainty envelope.

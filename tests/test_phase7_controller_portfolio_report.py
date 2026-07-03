@@ -80,6 +80,18 @@ class Phase7ControllerPortfolioReportTests(unittest.TestCase):
         self.assertEqual(len(report.aggregates), 3)
         self.assertTrue(all(aggregate.run_count == 16 for aggregate in report.aggregates))
         self.assertTrue(report.insights)
+        self.assertTrue(report.failure_summaries)
+        self.assertTrue(report.rejection_breakdown)
+        self.assertTrue(all(summary.rejected_runs > 0 for summary in report.failure_summaries))
+        self.assertTrue(all(item.rejected_runs > 0 for item in report.rejection_breakdown))
+        self.assertIn(
+            "NO_MEANINGFUL_BENEFIT",
+            {item.verdict_code for item in report.rejection_breakdown},
+        )
+        self.assertGreaterEqual(
+            report.failure_summaries[0].rejection_rate_percent,
+            report.failure_summaries[-1].rejection_rate_percent,
+        )
 
     def test_robustness_report_preserves_nominal_optimized_gain(self) -> None:
         report = build_controller_robustness_portfolio_report(entries=self.entries)
@@ -112,6 +124,8 @@ class Phase7ControllerPortfolioReportTests(unittest.TestCase):
             self.assertEqual(data["perturbation_count"], 8)
             self.assertEqual(data["row_count"], 24)
             self.assertTrue(data["insights"])
+            self.assertTrue(data["failure_summaries"])
+            self.assertTrue(data["rejection_breakdown"])
 
             with csv_path.open(newline="", encoding="utf-8") as file:
                 rows = list(csv.DictReader(file))

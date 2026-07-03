@@ -241,6 +241,9 @@ The Python simulator now provides:
   controller variants across the default perturbation envelope.
 - Automatic controller-portfolio insights that identify the current leading
   controller, its margin, and whether the result remains condition-dependent.
+- Robustness failure summaries that rank the most fragile scenario-controller
+  pairs by rejected perturbations.
+- Robustness rejection breakdowns grouped by controller and verdict code.
 - Automatic dashboard insights that summarize fuel benefit, state transitions,
   speed-tracking impact, and safety signals for the selected scenario.
 - An explicit dashboard research verdict that rejects efficiency claims when

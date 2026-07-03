@@ -62,6 +62,10 @@ clearest first demonstration. You should see:
   mass, drag, rolling-resistance, grip, and grade perturbations.
 - Automatic portfolio insight cards identifying the current leading controller
   and whether the result is still condition-dependent.
+- A most-fragile-cases table showing which scenario-controller pairs reject
+  the most robustness perturbations.
+- A rejection-breakdown table and chart grouping rejected robustness runs by
+  controller and verdict code.
 - A robustness view that repeats the selected scenario under payload, drag,
   rolling-resistance, grip, and grade perturbations.
 - Robustness charts showing fuel sensitivity and the fuel-versus-speed-tracking
