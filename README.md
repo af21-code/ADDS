@@ -114,11 +114,13 @@ constraints remain comparable.
 |   |-- robustness.py
 |   |-- run_controller_portfolio.py
 |   |-- run_controller_robustness_portfolio.py
+|   |-- run_endurance_strategy.py
 |   |-- run_robustness.py
 |   |-- run_track_lap.py
 |   |-- scenario_catalog.py
 |   |-- simulator.py
 |   |-- track_lap.py
+|   |-- endurance_strategy.py
 |   |-- train_imitation.py
 |   `-- visualization.py
 |-- docs
@@ -262,6 +264,9 @@ The Python simulator now provides:
   sectors.
 - A dashboard Track Lap view for inspecting the same reference circuit through
   side-by-side curves and downloadable artifacts.
+- A first endurance strategy layer that checks whether simulated ADDS fuel
+  saving becomes a real race-strategy advantage through stint length, pit stop
+  count, completed laps, and threshold analysis.
 - Physical logging and summary metrics.
 - Unit tests for the initial Phase 1 through Phase 8 acceptance cases.
 
@@ -385,6 +390,23 @@ The prototype is a longitudinal, fixed-distance reference lap. It is useful for
 comparing fuel use, lap time, speed tracking, mode transitions, decoupled
 duration, and re-engagement slip over the same 3 km circuit profile. It is not
 yet a full racing-line, tire-load-transfer, or lateral-dynamics track model.
+
+Run the endurance strategy analysis:
+
+```bash
+python3 -B -m adds_sim.run_endurance_strategy /tmp/adds_phase9_endurance
+```
+
+This writes:
+
+```text
+/tmp/adds_phase9_endurance/endurance_strategy_report.json
+/tmp/adds_phase9_endurance/endurance_strategy_summary.csv
+```
+
+The current strategy layer deliberately does not treat fuel saving as a win by
+itself. A result is strategically useful only if it improves completed laps,
+pit-stop count without losing distance, or lap-equivalent race time.
 
 Run the controller-portfolio report:
 

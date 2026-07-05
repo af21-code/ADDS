@@ -29,6 +29,14 @@ from .controllers import (
     coast_is_feasible,
 )
 from .defaults import default_simulation_config
+from .endurance_strategy import (
+    EnduranceStrategyConfig,
+    EnduranceStrategyReport,
+    EnduranceStrategyThresholds,
+    EnduranceVehicleStrategy,
+    run_endurance_strategy,
+    write_endurance_strategy_report,
+)
 from .learned_controller import LearnedADDSController
 from .metrics import summarize_run
 from .ml import (
@@ -126,6 +134,10 @@ __all__ = [
     "BatchEvaluationResult",
     "BehavioralCloningModel",
     "EngineParameters",
+    "EnduranceStrategyConfig",
+    "EnduranceStrategyReport",
+    "EnduranceStrategyThresholds",
+    "EnduranceVehicleStrategy",
     "EnvironmentParameters",
     "ImitationExample",
     "LearnedADDSController",
@@ -180,6 +192,7 @@ __all__ = [
     "reference_track_lap_sections",
     "records_for_dashboard",
     "run_batch_evaluation",
+    "run_endurance_strategy",
     "run_paired_comparison",
     "run_track_lap_comparison",
     "run_robustness_evaluation",
@@ -189,5 +202,6 @@ __all__ = [
     "write_robustness_report",
     "write_controller_robustness_portfolio_report",
     "write_controller_portfolio_report",
+    "write_endurance_strategy_report",
     "write_track_lap_report",
 ]

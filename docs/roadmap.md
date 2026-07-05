@@ -281,7 +281,37 @@ results inspectable before real-time integration work begins.
 - The report clearly remains a simulation-only longitudinal prototype, not a
   full vehicle-handling or racing simulator.
 
-## Phase 9: Real-Time and Integration Research
+## Phase 9: Endurance Strategy Evaluation
+
+### Goals
+
+- Determine whether ADDS fuel saving becomes a race-strategy advantage rather
+  than a fuel-only metric.
+- Extrapolate fixed-distance reference-lap results into long races with stint
+  length, pit-stop count, completed laps, total distance, and fuel use.
+- Report the threshold at which fuel saving becomes at least one extra lap per
+  stint.
+- Reject misleading conclusions where ADDS appears to stop less often only
+  because it completed fewer laps.
+
+### Deliverables
+
+- Endurance strategy model using the reference track-lap comparison as input.
+- Command-line endurance strategy report with JSON and CSV artifacts.
+- Verdicts that separate strategic advantage, distance advantage, time
+  advantage, fuel-only benefit, and fuel saving with lap loss.
+- Tests for configuration validation, threshold detection, verdict behavior,
+  and artifact generation.
+
+### Exit Criteria
+
+- A long-race report can state whether ADDS changes pit stops, completed laps,
+  or lap-equivalent race time.
+- Fuel saving alone is not treated as a win.
+- The strategy layer identifies the minimum reference stint length required for
+  ADDS to gain one extra lap per stint under the current lap model.
+
+## Phase 10: Real-Time and Integration Research
 
 This phase is optional and begins only after simulation validity is established.
 

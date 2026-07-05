@@ -570,7 +570,7 @@ def _track_lap_animation_html(report) -> str:
       color: var(--text);
     }}
     .sim {{
-      min-height: 706px;
+      min-height: 704px;
       border: 1px solid var(--border-strong);
       border-radius: 26px;
       overflow: hidden;
@@ -595,11 +595,8 @@ def _track_lap_animation_html(report) -> str:
       mix-blend-mode: screen;
     }}
     .topbar {{
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 20px 22px 16px;
+      display: block;
+      padding: 18px 18px 14px;
       border-bottom: 1px solid var(--border);
       background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.015));
       position: relative;
@@ -637,9 +634,18 @@ def _track_lap_animation_html(report) -> str:
     }}
     .status-row {{
       display: flex;
+      align-items: center;
       gap: 8px;
       flex-wrap: wrap;
-      margin-top: 10px;
+      margin-top: 8px;
+    }}
+    .status-title {{
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 950;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-right: 4px;
     }}
     .status {{
       border: 1px solid var(--border);
@@ -661,8 +667,9 @@ def _track_lap_animation_html(report) -> str:
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
-      justify-content: flex-end;
-      min-width: 250px;
+      justify-content: flex-start;
+      min-width: 0;
+      margin-top: 13px;
     }}
     button {{
       border: 1px solid var(--border);
@@ -686,7 +693,7 @@ def _track_lap_animation_html(report) -> str:
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
-      padding: 14px 22px 0;
+      padding: 12px 18px 0;
     }}
     .summary-item {{
       border: 1px solid var(--border);
@@ -698,10 +705,10 @@ def _track_lap_animation_html(report) -> str:
       position: relative;
       z-index: 1;
       display: grid;
-      grid-template-columns: minmax(520px, 1fr) 340px;
-      gap: 14px;
+      grid-template-columns: minmax(430px, 1fr) 252px;
+      gap: 12px;
       align-items: stretch;
-      padding: 14px 22px 20px;
+      padding: 12px 18px 18px;
     }}
     .track-panel, .telemetry-panel {{
       background: var(--panel);
@@ -712,7 +719,7 @@ def _track_lap_animation_html(report) -> str:
     }}
     .track-panel {{
       min-height: 510px;
-      padding: 14px;
+      padding: 12px;
       position: relative;
       overflow: hidden;
       background:
@@ -750,7 +757,7 @@ def _track_lap_animation_html(report) -> str:
     svg {{
       display: block;
       width: 100%;
-      height: 492px;
+      height: 488px;
     }}
     .runoff {{
       fill: none;
@@ -838,10 +845,10 @@ def _track_lap_animation_html(report) -> str:
       pointer-events: none;
     }}
     .telemetry-panel {{
-      padding: 14px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 9px;
     }}
     .panel-heading {{
       display: flex;
@@ -868,7 +875,7 @@ def _track_lap_animation_html(report) -> str:
       padding: 14px;
     }}
     .time-value {{
-      font-size: 38px;
+      font-size: 34px;
       font-weight: 850;
       letter-spacing: -0.04em;
     }}
@@ -913,23 +920,23 @@ def _track_lap_animation_html(report) -> str:
     .grid {{
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      gap: 7px;
     }}
     .metric {{
       background: rgba(0,0,0,0.18);
       border: 1px solid rgba(255,255,255,0.055);
       border-radius: 12px;
-      padding: 9px;
+      padding: 8px;
     }}
     .label {{
       color: var(--muted);
-      font-size: 10px;
+      font-size: 9px;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       margin-bottom: 4px;
     }}
     .value {{
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 800;
       letter-spacing: -0.02em;
     }}
@@ -967,7 +974,7 @@ def _track_lap_animation_html(report) -> str:
       font-size: 12px;
       line-height: 1.45;
     }}
-    @media (max-width: 980px) {{
+    @media (max-width: 760px) {{
       .topbar {{
         display: block;
       }}
@@ -1029,6 +1036,7 @@ def _track_lap_animation_html(report) -> str:
           </div>
         </div>
         <div class="status-row">
+          <span class="status-title">ADDS Race Control</span>
           <span class="status live">Telemetry replay</span>
           <span class="status">Simulation only</span>
           <span class="status">Controller: {report.adds_controller_kind.replace("_", " ")}</span>
