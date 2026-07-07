@@ -71,14 +71,22 @@ def run_endurance_strategy(
     """Run a fixed-duration endurance strategy extrapolation."""
 
     strategy_config = config or EnduranceStrategyConfig()
-    if strategy_config.race_duration_hours <= 0.0:
-        raise ValueError("race_duration_hours must be > 0")
-    if strategy_config.reference_stint_laps <= 0:
-        raise ValueError("reference_stint_laps must be > 0")
-    if strategy_config.pit_stop_loss_seconds < 0.0:
-        raise ValueError("pit_stop_loss_seconds must be >= 0")
-
+    _validate_strategy_config(strategy_config)
     track_lap = run_track_lap_comparison(strategy_config.adds_controller_kind)
+    return build_endurance_strategy_report(track_lap, strategy_config)
+
+
+def build_endurance_strategy_report(
+    track_lap: TrackLapComparison,
+    config: EnduranceStrategyConfig | None = None,
+) -> EnduranceStrategyReport:
+    """Build an endurance strategy report from one paired track-lap comparison."""
+
+    strategy_config = config or EnduranceStrategyConfig(
+        adds_controller_kind=track_lap.adds_controller_kind
+    )
+    _validate_strategy_config(strategy_config)
+
     conventional_lap_time = float(track_lap.comparison.conventional_summary["travel_time"])
     adds_lap_time = float(track_lap.comparison.adds_summary["travel_time"])
     conventional_fuel = float(track_lap.comparison.conventional_summary["fuel_used"])
@@ -129,6 +137,15 @@ def run_endurance_strategy(
         verdict=verdict,
         interpretation=interpretation,
     )
+
+
+def _validate_strategy_config(strategy_config: EnduranceStrategyConfig) -> None:
+    if strategy_config.race_duration_hours <= 0.0:
+        raise ValueError("race_duration_hours must be > 0")
+    if strategy_config.reference_stint_laps <= 0:
+        raise ValueError("reference_stint_laps must be > 0")
+    if strategy_config.pit_stop_loss_seconds < 0.0:
+        raise ValueError("pit_stop_loss_seconds must be >= 0")
 
 
 def write_endurance_strategy_report(
@@ -268,6 +285,13 @@ def _strategy_interpretation(
             messages.append(
                 "The lower pit count is not a strategic win here because it is caused by completing fewer laps."
             )
+    elif (
+        abs(float(deltas["relative_fuel_change"])) < 0.1
+        and delta_completed_laps == 0
+        and int(deltas["delta_pit_stops"]) == 0
+    ):
+        verdict = "NEUTRAL_NO_BENEFIT"
+        messages.append("ADDS is effectively neutral in this endurance extrapolation.")
     elif bool(deltas["adds_saves_pit_stop"]):
         verdict = "STRATEGIC_ADVANTAGE"
         messages.append("ADDS saves at least one simulated pit stop under the current endurance assumptions.")

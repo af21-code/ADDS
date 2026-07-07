@@ -10,6 +10,7 @@ from typing import Literal
 
 from .comparison import PairedComparisonResult, run_paired_comparison
 from .controllers import (
+    Controller,
     ConventionalBaselineController,
     OfflineOptimizedADDSController,
     RuleBasedADDSController,
@@ -55,7 +56,7 @@ class TrackLapComparison:
     schema_version: str
     track_name: str
     description: str
-    adds_controller_kind: TrackLapControllerKind
+    adds_controller_kind: str
     scenario: Scenario
     sections: tuple[TrackLapSection, ...]
     comparison: PairedComparisonResult
@@ -136,6 +137,36 @@ def run_track_lap_comparison(
         simulator=simulator,
         scenario=scenario,
         conventional_controller=conventional_controller,
+        adds_controller=adds_controller,
+    )
+    return TrackLapComparison(
+        schema_version="1.0",
+        track_name=track_name,
+        description=(
+            "Fixed-distance longitudinal reference lap with repeated lift-off, "
+            "minimum-speed, and reacceleration sectors."
+        ),
+        adds_controller_kind=adds_controller_kind,
+        scenario=scenario,
+        sections=reference_track_lap_sections(),
+        comparison=comparison,
+        stats=track_lap_stats(comparison),
+    )
+
+
+def run_custom_track_lap_comparison(
+    adds_controller: Controller,
+    adds_controller_kind: str,
+    track_name: str = "ADDS reference circuit v1",
+) -> TrackLapComparison:
+    """Run the reference track lap with a caller-provided ADDS controller."""
+
+    scenario = build_reference_track_lap_scenario(track_name=track_name)
+    simulator = LongitudinalSimulator(default_simulation_config())
+    comparison = run_paired_comparison(
+        simulator=simulator,
+        scenario=scenario,
+        conventional_controller=ConventionalBaselineController(scenario.initial_gear),
         adds_controller=adds_controller,
     )
     return TrackLapComparison(

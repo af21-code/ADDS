@@ -311,7 +311,39 @@ results inspectable before real-time integration work begins.
 - The strategy layer identifies the minimum reference stint length required for
   ADDS to gain one extra lap per stint under the current lap model.
 
-## Phase 10: Real-Time and Integration Research
+## Phase 10: Endurance-Oriented Policy Search
+
+### Goals
+
+- Search interpretable ADDS policy parameters using endurance value rather than
+  fuel saving alone.
+- Reject candidates that save fuel but lose completed laps in the fixed-duration
+  race extrapolation.
+- Identify the best non-losing guardrail policy and the strongest fuel-saving
+  but lap-losing policy so the next engineering work is concrete.
+- Produce recommended next actions focused on reducing lap-time penalty before
+  claiming endurance race usefulness.
+
+### Deliverables
+
+- Deterministic endurance-policy candidate grid.
+- Candidate-level JSON and CSV report with fuel change, lap-time delta,
+  completed-lap delta, pit-stop delta, lap-equivalent advantage, transitions,
+  safety overrides, and promotion eligibility.
+- Explicit promotion decision and reasons.
+- Tests for grid stability, promotion rejection, recommendations, and artifact
+  generation.
+
+### Exit Criteria
+
+- No candidate is promoted unless it produces a positive race-useful result
+  without losing completed laps.
+- The report distinguishes neutral non-decoupling candidates from fuel-saving
+  but lap-losing candidates.
+- The next optimization target is stated in operational terms rather than as a
+  generic fuel-saving goal.
+
+## Phase 11: Real-Time and Integration Research
 
 This phase is optional and begins only after simulation validity is established.
 

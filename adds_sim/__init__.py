@@ -29,6 +29,14 @@ from .controllers import (
     coast_is_feasible,
 )
 from .defaults import default_simulation_config
+from .endurance_policy_search import (
+    EndurancePolicyCandidate,
+    EndurancePolicySearchReport,
+    EndurancePolicySearchRow,
+    default_endurance_policy_candidates,
+    run_endurance_policy_search,
+    write_endurance_policy_search_report,
+)
 from .endurance_strategy import (
     EnduranceStrategyConfig,
     EnduranceStrategyReport,
@@ -134,6 +142,9 @@ __all__ = [
     "BatchEvaluationResult",
     "BehavioralCloningModel",
     "EngineParameters",
+    "EndurancePolicyCandidate",
+    "EndurancePolicySearchReport",
+    "EndurancePolicySearchRow",
     "EnduranceStrategyConfig",
     "EnduranceStrategyReport",
     "EnduranceStrategyThresholds",
@@ -180,6 +191,7 @@ __all__ = [
     "collect_imitation_examples",
     "coast_is_feasible",
     "default_simulation_config",
+    "default_endurance_policy_candidates",
     "default_perturbations",
     "entries_by_split",
     "evaluate_dashboard_comparison",
@@ -192,6 +204,7 @@ __all__ = [
     "reference_track_lap_sections",
     "records_for_dashboard",
     "run_batch_evaluation",
+    "run_endurance_policy_search",
     "run_endurance_strategy",
     "run_paired_comparison",
     "run_track_lap_comparison",
@@ -202,6 +215,7 @@ __all__ = [
     "write_robustness_report",
     "write_controller_robustness_portfolio_report",
     "write_controller_portfolio_report",
+    "write_endurance_policy_search_report",
     "write_endurance_strategy_report",
     "write_track_lap_report",
 ]

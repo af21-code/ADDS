@@ -105,6 +105,7 @@ constraints remain comparable.
 |   |-- controllers.py
 |   |-- data.py
 |   |-- defaults.py
+|   |-- endurance_policy_search.py
 |   |-- learned_controller.py
 |   |-- metrics.py
 |   |-- ml.py
@@ -114,6 +115,7 @@ constraints remain comparable.
 |   |-- robustness.py
 |   |-- run_controller_portfolio.py
 |   |-- run_controller_robustness_portfolio.py
+|   |-- run_endurance_policy_search.py
 |   |-- run_endurance_strategy.py
 |   |-- run_robustness.py
 |   |-- run_track_lap.py
@@ -267,6 +269,8 @@ The Python simulator now provides:
 - A first endurance strategy layer that checks whether simulated ADDS fuel
   saving becomes a real race-strategy advantage through stint length, pit stop
   count, completed laps, and threshold analysis.
+- A first endurance-oriented policy search that refuses to promote fuel-saving
+  candidates when they lose completed laps in the 24h extrapolation.
 - Physical logging and summary metrics.
 - Unit tests for the initial Phase 1 through Phase 8 acceptance cases.
 
@@ -407,6 +411,22 @@ This writes:
 The current strategy layer deliberately does not treat fuel saving as a win by
 itself. A result is strategically useful only if it improves completed laps,
 pit-stop count without losing distance, or lap-equivalent race time.
+
+Run the endurance-oriented policy search:
+
+```bash
+python3 -B -m adds_sim.run_endurance_policy_search /tmp/adds_phase10_endurance_policy_search
+```
+
+This writes:
+
+```text
+/tmp/adds_phase10_endurance_policy_search/endurance_policy_search_report.json
+/tmp/adds_phase10_endurance_policy_search/endurance_policy_search_rows.csv
+```
+
+The current search is intentionally conservative: it reports that no candidate
+should be promoted if the fuel-saving candidates still lose completed laps.
 
 Run the controller-portfolio report:
 
