@@ -45,6 +45,9 @@ def main() -> None:
         print(
             "candidate: "
             f"{row.candidate.candidate_id}, "
+            f"coast_margin={row.candidate.coast_speed_margin:.2f}, "
+            f"reconnect_margin={row.candidate.reconnect_speed_margin:.2f}, "
+            f"min_drop={row.candidate.minimum_target_speed_drop:.2f}, "
             f"verdict={row.verdict}, "
             f"fuel={row.relative_fuel_change:.3f}%, "
             f"lap_time_delta={row.delta_lap_time:.3f}s, "

@@ -434,7 +434,10 @@ This writes:
 ```
 
 The current search is intentionally conservative: it reports that no candidate
-should be promoted if the fuel-saving candidates still lose completed laps.
+should be promoted if the fuel-saving candidates still lose completed laps. The
+candidate grid now varies coast margin, reconnect margin, and minimum target
+speed drop so the report can distinguish maximum fuel saving from the
+least-damaging fuel-saving candidate.
 
 Run the track-lap sector analysis:
 

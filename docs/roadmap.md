@@ -319,14 +319,19 @@ results inspectable before real-time integration work begins.
   fuel saving alone.
 - Reject candidates that save fuel but lose completed laps in the fixed-duration
   race extrapolation.
+- Include reconnect-margin variation so the search can test earlier
+  re-engagement against endurance value.
 - Identify the best non-losing guardrail policy and the strongest fuel-saving
   but lap-losing policy so the next engineering work is concrete.
+- Identify the least-damaging fuel-saving policy when every fuel-saving
+  candidate still loses completed laps.
 - Produce recommended next actions focused on reducing lap-time penalty before
   claiming endurance race usefulness.
 
 ### Deliverables
 
-- Deterministic endurance-policy candidate grid.
+- Deterministic endurance-policy candidate grid covering coast margin,
+  reconnect margin, and minimum target-speed drop.
 - Candidate-level JSON and CSV report with fuel change, lap-time delta,
   completed-lap delta, pit-stop delta, lap-equivalent advantage, transitions,
   safety overrides, and promotion eligibility.

@@ -18,9 +18,9 @@ class Phase10EndurancePolicySearchTests(unittest.TestCase):
     def test_search_uses_deterministic_candidate_grid(self) -> None:
         candidates = default_endurance_policy_candidates()
 
-        self.assertEqual(len(candidates), 20)
+        self.assertEqual(len(candidates), 60)
         self.assertEqual(candidates[0].candidate_id, "E01")
-        self.assertEqual(candidates[-1].candidate_id, "E20")
+        self.assertEqual(candidates[-1].candidate_id, "E60")
         self.assertEqual(len(self.report.rows), len(candidates))
 
     def test_current_grid_does_not_promote_fuel_saving_with_lap_loss(self) -> None:
@@ -40,6 +40,7 @@ class Phase10EndurancePolicySearchTests(unittest.TestCase):
 
         self.assertIn("Do not promote", actions)
         self.assertIn("best fuel-saving candidate", actions)
+        self.assertIn("least damaging fuel-saving candidate", actions)
         self.assertIn("best non-losing candidate", actions)
 
     def test_writes_endurance_policy_search_artifacts(self) -> None:
@@ -54,7 +55,7 @@ class Phase10EndurancePolicySearchTests(unittest.TestCase):
             data = json.loads(json_path.read_text(encoding="utf-8"))
             self.assertEqual(data["schema_version"], "1.0")
             self.assertFalse(data["promotion_passed"])
-            self.assertEqual(len(data["rows"]), 20)
+            self.assertEqual(len(data["rows"]), 60)
             self.assertGreater(len(csv_path.read_text(encoding="utf-8").splitlines()), 1)
 
 

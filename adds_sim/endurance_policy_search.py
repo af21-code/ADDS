@@ -75,17 +75,18 @@ def default_endurance_policy_candidates() -> tuple[EndurancePolicyCandidate, ...
     candidates: list[EndurancePolicyCandidate] = []
     index = 1
     for coast_speed_margin in (0.20, 0.30, 0.40, 0.50, 0.60):
-        for minimum_target_speed_drop in (0.25, 0.30, 0.35, 0.45):
-            candidates.append(
-                EndurancePolicyCandidate(
-                    candidate_id=f"E{index:02d}",
-                    coast_speed_margin=coast_speed_margin,
-                    reconnect_speed_margin=0.1,
-                    minimum_target_speed_drop=minimum_target_speed_drop,
-                    maximum_coast_grade=0.005,
+        for reconnect_speed_margin in (0.05, 0.10, 0.20):
+            for minimum_target_speed_drop in (0.25, 0.30, 0.35, 0.45):
+                candidates.append(
+                    EndurancePolicyCandidate(
+                        candidate_id=f"E{index:02d}",
+                        coast_speed_margin=coast_speed_margin,
+                        reconnect_speed_margin=reconnect_speed_margin,
+                        minimum_target_speed_drop=minimum_target_speed_drop,
+                        maximum_coast_grade=0.005,
+                    )
                 )
-            )
-            index += 1
+                index += 1
     return tuple(candidates)
 
 
@@ -134,6 +135,7 @@ def write_endurance_policy_search_report(
             fieldnames=(
                 "candidate_id",
                 "coast_speed_margin",
+                "reconnect_speed_margin",
                 "minimum_target_speed_drop",
                 "verdict",
                 "relative_fuel_change",
@@ -251,6 +253,20 @@ def _recommended_next_actions(
             "Validate the result under longer tracks, pit-loss sweeps, and perturbations.",
         )
     best_saving = min(rows, key=lambda row: row.relative_fuel_change)
+    fuel_saving_rows = tuple(row for row in rows if row.relative_fuel_change < -0.1)
+    least_lap_loss_saving = (
+        sorted(
+            fuel_saving_rows,
+            key=lambda row: (
+                abs(min(row.delta_completed_laps, 0)),
+                row.delta_lap_time,
+                row.relative_fuel_change,
+                row.candidate.candidate_id,
+            ),
+        )[0]
+        if fuel_saving_rows
+        else best_saving
+    )
     best_non_losing = next((row for row in rows if row.delta_completed_laps >= 0), rows[0])
     return (
         "Do not promote a new ADDS race policy yet.",
@@ -259,6 +275,13 @@ def _recommended_next_actions(
             f"best fuel-saving candidate {best_saving.candidate.candidate_id} saves "
             f"{abs(best_saving.relative_fuel_change):.3f}% but has "
             f"{best_saving.delta_completed_laps} completed laps."
+        ),
+        (
+            "The least damaging fuel-saving candidate is "
+            f"{least_lap_loss_saving.candidate.candidate_id}: it saves "
+            f"{abs(least_lap_loss_saving.relative_fuel_change):.3f}% with "
+            f"{least_lap_loss_saving.delta_completed_laps} completed laps and "
+            f"{least_lap_loss_saving.delta_lap_time:.3f}s lap-time delta."
         ),
         (
             "Use the best non-losing candidate as a guardrail; "
@@ -285,6 +308,7 @@ def _row_payload(row: EndurancePolicySearchRow) -> dict[str, object]:
     return {
         "candidate_id": row.candidate.candidate_id,
         "coast_speed_margin": row.candidate.coast_speed_margin,
+        "reconnect_speed_margin": row.candidate.reconnect_speed_margin,
         "minimum_target_speed_drop": row.candidate.minimum_target_speed_drop,
         "verdict": row.verdict,
         "relative_fuel_change": row.relative_fuel_change,
