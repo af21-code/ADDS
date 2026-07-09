@@ -13,7 +13,7 @@ def main() -> None:
     parser.add_argument("output_dir", type=Path, help="Directory for track-lap artifacts.")
     parser.add_argument(
         "--controller",
-        choices=("rule_based", "offline_optimized", "learned"),
+        choices=("rule_based", "offline_optimized", "track_lap_balanced", "learned"),
         default="offline_optimized",
         help="ADDS controller variant to compare against the conventional baseline.",
     )

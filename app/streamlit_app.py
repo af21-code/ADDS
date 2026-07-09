@@ -21,6 +21,7 @@ from adds_sim.controller_portfolio import (
     build_controller_robustness_portfolio_report,
 )
 from adds_sim.track_lap import run_track_lap_comparison
+from adds_sim.units import fuel_kg_to_ml
 from adds_sim.visualization import (
     MODE_ORDER,
     available_dashboard_scenarios,
@@ -511,7 +512,7 @@ def _animation_records(records, sample_interval: float = 0.1) -> list[dict[str, 
                 "distance": float(record["position"]),
                 "speed": float(record["vehicle_speed"]) * 3.6,
                 "targetSpeed": float(record["target_speed"]) * 3.6,
-                "fuel": float(record["engine_fuel_used"]) * 1_000_000.0,
+                "fuel": fuel_kg_to_ml(float(record["engine_fuel_used"])),
                 "mode": str(record["coupling_mode"]),
                 "engineRpm": float(record["engine_speed"]) * 60.0 / (2.0 * 3.141592653589793),
             }
@@ -525,7 +526,7 @@ def _animation_records(records, sample_interval: float = 0.1) -> list[dict[str, 
                 "distance": float(final["position"]),
                 "speed": float(final["vehicle_speed"]) * 3.6,
                 "targetSpeed": float(final["target_speed"]) * 3.6,
-                "fuel": float(final["engine_fuel_used"]) * 1_000_000.0,
+                "fuel": fuel_kg_to_ml(float(final["engine_fuel_used"])),
                 "mode": str(final["coupling_mode"]),
                 "engineRpm": float(final["engine_speed"]) * 60.0 / (2.0 * 3.141592653589793),
             }
@@ -1057,7 +1058,7 @@ def _track_lap_animation_html(report) -> str:
       </div>
       <div class="summary-item">
         <div class="label">Fuel delta</div>
-        <div class="value">{float(report.comparison.deltas["delta_fuel_used"]) * 1_000_000.0:.0f} ml</div>
+        <div class="value">{fuel_kg_to_ml(float(report.comparison.deltas["delta_fuel_used"])):.1f} ml</div>
       </div>
       <div class="summary-item">
         <div class="label">ADDS lap time</div>
@@ -1872,16 +1873,23 @@ def main() -> None:
         selected_label = st.selectbox("Scenario", tuple(option_by_label), index=default_index)
         controller_label = st.radio(
             "ADDS controller",
-            ("Rule-based ADDS", "Offline-optimized ADDS", "Learned ADDS"),
+            (
+                "Rule-based ADDS",
+                "Offline-optimized ADDS",
+                "Track-lap balanced ADDS",
+                "Learned ADDS",
+            ),
             help=(
                 "Rule-based is the transparent initial baseline. Offline-optimized "
-                "freezes the promoted C03 search candidate. Learned is a compact "
-                "behavioral-cloning policy trained from the rule-based expert."
+                "freezes the promoted C03 search candidate. Track-lap balanced "
+                "uses the sector-penalty search candidate T10. Learned is a "
+                "compact behavioral-cloning policy trained from the rule-based expert."
             ),
         )
         controller_kind_by_label = {
             "Rule-based ADDS": "rule_based",
             "Offline-optimized ADDS": "offline_optimized",
+            "Track-lap balanced ADDS": "track_lap_balanced",
             "Learned ADDS": "learned",
         }
         controller_kind = controller_kind_by_label[controller_label]
@@ -1890,6 +1898,11 @@ def main() -> None:
             st.caption(
                 "The offline-optimized controller freezes candidate C03 from the "
                 "train/validation/test policy-search audit."
+            )
+        if controller_kind == "track_lap_balanced":
+            st.caption(
+                "The track-lap balanced controller freezes candidate T10 from the "
+                "sector-penalty search and targets lower lap-time loss."
             )
         if controller_kind == "learned":
             st.caption("The learned controller is an early conservative clone and may choose not to decouple.")

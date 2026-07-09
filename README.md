@@ -119,9 +119,13 @@ constraints remain comparable.
 |   |-- run_endurance_strategy.py
 |   |-- run_robustness.py
 |   |-- run_track_lap.py
+|   |-- run_track_lap_analysis.py
+|   |-- run_track_lap_policy_search.py
 |   |-- scenario_catalog.py
 |   |-- simulator.py
 |   |-- track_lap.py
+|   |-- track_lap_analysis.py
+|   |-- track_lap_policy_search.py
 |   |-- endurance_strategy.py
 |   |-- train_imitation.py
 |   `-- visualization.py
@@ -271,8 +275,12 @@ The Python simulator now provides:
   count, completed laps, and threshold analysis.
 - A first endurance-oriented policy search that refuses to promote fuel-saving
   candidates when they lose completed laps in the 24h extrapolation.
+- Sector-level track-lap diagnostics that identify where ADDS saves fuel, where
+  it loses lap time, and which sector should become the next regression target.
+- A track-lap balanced deterministic ADDS variant promoted from a sector-penalty
+  policy search.
 - Physical logging and summary metrics.
-- Unit tests for the initial Phase 1 through Phase 8 acceptance cases.
+- Unit tests for the initial Phase 1 through Phase 12 acceptance cases.
 
 Run the offline policy-search audit from the repository root:
 
@@ -428,6 +436,42 @@ This writes:
 The current search is intentionally conservative: it reports that no candidate
 should be promoted if the fuel-saving candidates still lose completed laps.
 
+Run the track-lap sector analysis:
+
+```bash
+python3 -B -m adds_sim.run_track_lap_analysis /tmp/adds_phase11_sector_analysis
+```
+
+This writes:
+
+```text
+/tmp/adds_phase11_sector_analysis/track_lap_sector_analysis.json
+/tmp/adds_phase11_sector_analysis/track_lap_sector_analysis.csv
+```
+
+The sector analysis converts the reference lap into named distance-domain
+segments and reports where ADDS gains fuel, where it loses time, how many
+coupling transitions occur, and which sector should be used as the next
+lap-time-penalty regression case.
+
+Run the track-lap policy search:
+
+```bash
+python3 -B -m adds_sim.run_track_lap_policy_search /tmp/adds_phase12_track_lap_policy_search
+```
+
+This writes:
+
+```text
+/tmp/adds_phase12_track_lap_policy_search/track_lap_policy_search_report.json
+/tmp/adds_phase12_track_lap_policy_search/track_lap_policy_search_rows.csv
+```
+
+The current report promotes candidate `T10` as the `track_lap_balanced`
+controller variant. In the reference lap, it reduces the offline-optimized
+lap-time penalty and the worst-sector time loss while preserving a simulated
+fuel saving above the current 1% research gate.
+
 Run the controller-portfolio report:
 
 ```bash
@@ -462,7 +506,8 @@ python3 -m streamlit run app/streamlit_app.py --server.address localhost
 ```
 
 The dashboard lets you select a catalog scenario, compare the conventional
-baseline against the rule-based, offline-optimized, or learned ADDS controller,
+baseline against the rule-based, offline-optimized, track-lap balanced, or
+learned ADDS controller,
 inspect speed, fuel, engine-speed, coupling-mode, and slip-energy curves side
 by side, and review controller portfolio and robustness portfolio matrices
 across the full catalog.

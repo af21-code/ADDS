@@ -343,7 +343,63 @@ results inspectable before real-time integration work begins.
 - The next optimization target is stated in operational terms rather than as a
   generic fuel-saving goal.
 
-## Phase 11: Real-Time and Integration Research
+## Phase 11: Track-Lap Sector Penalty Analysis
+
+### Goals
+
+- Diagnose where the reference lap loses time when ADDS saves fuel.
+- Convert the reference circuit profile into named distance-domain sectors.
+- Report sector-level fuel delta, time delta, transition count, and decoupled
+  duration.
+- Identify one concrete regression sector for the next controller-improvement
+  loop.
+
+### Deliverables
+
+- Sector-level track-lap analysis model.
+- Command-line JSON and CSV report writer.
+- Recommendations that distinguish productive saving from saving that carries a
+  lap-time penalty.
+- Tests for sector coverage, diagnostic behavior, aggregate consistency, and
+  artifact generation.
+
+### Exit Criteria
+
+- The report identifies the worst lap-time-loss sector and best fuel-saving
+  sector for the current ADDS controller.
+- Sector totals remain consistent with the lap-level comparison direction.
+- The next optimization target is a named circuit sector rather than a vague
+  project-level objective.
+
+## Phase 12: Track-Lap Penalty Policy Search
+
+### Goals
+
+- Search interpretable controller parameters against the sector-level track-lap
+  diagnostic target.
+- Promote a controller only if it keeps meaningful simulated fuel saving while
+  reducing both lap-time penalty and worst-sector time loss.
+- Preserve the existing offline-optimized baseline as historical context rather
+  than silently changing its behavior.
+
+### Deliverables
+
+- Deterministic track-lap policy candidate grid.
+- Command-line JSON and CSV search report.
+- Promoted `track_lap_balanced` controller variant for reference-lap review.
+- Tests for candidate-grid stability, promotion behavior, controller parameter
+  alignment, sector improvement, and artifact generation.
+
+### Exit Criteria
+
+- The promoted candidate improves the reference lap-time penalty versus the
+  offline-optimized baseline.
+- The promoted candidate reduces the `Fast kink lift-off` worst-sector penalty.
+- Simulated fuel saving remains above the current 1% research gate.
+- The new variant can be selected independently of the older offline-optimized
+  controller.
+
+## Phase 13: Real-Time and Integration Research
 
 This phase is optional and begins only after simulation validity is established.
 

@@ -203,6 +203,22 @@ class OfflineOptimizedADDSController(RuleBasedADDSController):
 
 
 @dataclass(frozen=True)
+class TrackLapBalancedADDSController(RuleBasedADDSController):
+    """Track-lap focused deterministic ADDS baseline.
+
+    This controller keeps the same interpretable rule shape as the offline
+    optimized baseline, but uses the Phase 12 sector-penalty search candidate
+    that reduced the reference-lap time penalty while preserving fuel saving.
+    """
+
+    coast_speed_margin: float = 0.4
+    reconnect_speed_margin: float = 0.05
+    minimum_target_speed_drop: float = 0.25
+    maximum_coast_grade: float = 0.005
+    name: str = "track_lap_balanced_adds"
+
+
+@dataclass(frozen=True)
 class ScriptedModeController(Controller):
     """Time-scheduled controller useful for deterministic state-machine tests."""
 

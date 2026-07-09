@@ -21,11 +21,11 @@ class Phase7ControllerPortfolioReportTests(unittest.TestCase):
         report = build_controller_portfolio_report(entries=self.entries)
 
         self.assertEqual(report.scenario_count, len(self.entries))
-        self.assertEqual(len(report.rows), len(self.entries) * 3)
-        self.assertEqual(len(report.aggregates), 3)
+        self.assertEqual(len(report.rows), len(self.entries) * 4)
+        self.assertEqual(len(report.aggregates), 4)
         self.assertEqual(
             {aggregate.adds_controller_kind for aggregate in report.aggregates},
-            {"rule_based", "offline_optimized", "learned"},
+            {"rule_based", "offline_optimized", "track_lap_balanced", "learned"},
         )
         self.assertTrue(
             all(aggregate.scenario_count == len(self.entries) for aggregate in report.aggregates)
@@ -60,14 +60,14 @@ class Phase7ControllerPortfolioReportTests(unittest.TestCase):
             data = json.loads(json_path.read_text(encoding="utf-8"))
             self.assertEqual(data["schema_version"], "1.0")
             self.assertEqual(data["scenario_count"], 2)
-            self.assertEqual(data["row_count"], 6)
-            self.assertEqual(len(data["aggregates"]), 3)
+            self.assertEqual(data["row_count"], 8)
+            self.assertEqual(len(data["aggregates"]), 4)
             self.assertTrue(data["insights"])
 
             with csv_path.open(newline="", encoding="utf-8") as file:
                 rows = list(csv.DictReader(file))
 
-        self.assertEqual(len(rows), 6)
+        self.assertEqual(len(rows), 8)
         self.assertIn("controller_label", rows[0])
         self.assertIn("relative_fuel_change", rows[0])
 
@@ -76,8 +76,8 @@ class Phase7ControllerPortfolioReportTests(unittest.TestCase):
 
         self.assertEqual(report.scenario_count, 2)
         self.assertEqual(report.perturbation_count, 8)
-        self.assertEqual(len(report.rows), 2 * 3 * 8)
-        self.assertEqual(len(report.aggregates), 3)
+        self.assertEqual(len(report.rows), 2 * 4 * 8)
+        self.assertEqual(len(report.aggregates), 4)
         self.assertTrue(all(aggregate.run_count == 16 for aggregate in report.aggregates))
         self.assertTrue(report.insights)
         self.assertTrue(report.failure_summaries)
@@ -128,7 +128,7 @@ class Phase7ControllerPortfolioReportTests(unittest.TestCase):
             self.assertEqual(data["schema_version"], "1.0")
             self.assertEqual(data["scenario_count"], 1)
             self.assertEqual(data["perturbation_count"], 8)
-            self.assertEqual(data["row_count"], 24)
+            self.assertEqual(data["row_count"], 32)
             self.assertTrue(data["insights"])
             self.assertTrue(data["failure_summaries"])
             self.assertTrue(data["rejection_breakdown"])
@@ -137,7 +137,7 @@ class Phase7ControllerPortfolioReportTests(unittest.TestCase):
             with csv_path.open(newline="", encoding="utf-8") as file:
                 rows = list(csv.DictReader(file))
 
-        self.assertEqual(len(rows), 24)
+        self.assertEqual(len(rows), 32)
         self.assertIn("perturbation", rows[0])
         self.assertIn("controller_label", rows[0])
 

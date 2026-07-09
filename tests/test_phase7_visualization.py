@@ -171,10 +171,10 @@ class Phase7VisualizationTests(unittest.TestCase):
         options = available_dashboard_scenarios()
         rows = build_dashboard_controller_portfolio()
 
-        self.assertEqual(len(rows), len(options) * 3)
+        self.assertEqual(len(rows), len(options) * 4)
         self.assertEqual(
             {row.adds_controller_kind for row in rows},
-            {"rule_based", "offline_optimized", "learned"},
+            {"rule_based", "offline_optimized", "track_lap_balanced", "learned"},
         )
         self.assertTrue(all(row.controller_label for row in rows))
         self.assertTrue(all(row.verdict_code for row in rows))

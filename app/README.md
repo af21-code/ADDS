@@ -61,8 +61,8 @@ clearest first demonstration. You should see:
 - Track-lap summary charts for lap time, fuel change, RMS speed error,
   decoupled duration, mode timeline, and trajectory downloads.
 - A catalog summary table and fuel-change bar chart across all scenarios.
-- A controller portfolio view comparing rule-based, offline-optimized, and
-  learned ADDS across the full scenario catalog.
+- A controller portfolio view comparing rule-based, offline-optimized,
+  track-lap balanced, and learned ADDS across the full scenario catalog.
 - A robustness portfolio view comparing the same controllers across all default
   mass, drag, rolling-resistance, grip, and grade perturbations.
 - Automatic portfolio insight cards identifying the current leading controller

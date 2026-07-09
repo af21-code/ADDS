@@ -9,6 +9,7 @@ from .controllers import (
     ConventionalBaselineController,
     OfflineOptimizedADDSController,
     RuleBasedADDSController,
+    TrackLapBalancedADDSController,
 )
 from .defaults import default_simulation_config
 from .learned_controller import LearnedADDSController
@@ -20,6 +21,7 @@ from .robustness import (
 )
 from .scenario_catalog import ScenarioCatalogEntry, phase4_scenario_catalog
 from .simulator import LongitudinalSimulator, SimulationResult
+from .units import fuel_kg_to_ml
 
 
 MODE_ORDER = (
@@ -34,6 +36,7 @@ MODE_TO_INDEX = {mode: index for index, mode in enumerate(MODE_ORDER)}
 DASHBOARD_CONTROLLER_LABELS = {
     "rule_based": "Rule-based ADDS",
     "offline_optimized": "Offline-optimized ADDS",
+    "track_lap_balanced": "Track-lap balanced ADDS",
     "learned": "Learned ADDS",
 }
 SUPPORTED_DASHBOARD_CONTROLLER_KINDS = tuple(DASHBOARD_CONTROLLER_LABELS)
@@ -274,7 +277,7 @@ def build_dashboard_catalog_summary(
                 split=entry.split,
                 description=entry.description,
                 adds_controller_kind=adds_controller_kind,
-                fuel_delta_ml=float(comparison.comparison.deltas["delta_fuel_used"]) * 1_000_000.0,
+                fuel_delta_ml=fuel_kg_to_ml(float(comparison.comparison.deltas["delta_fuel_used"])),
                 relative_fuel_change=float(comparison.comparison.deltas["relative_fuel_change"]),
                 rms_speed_error_delta_kmh=float(comparison.comparison.deltas["delta_rms_speed_error"]) * 3.6,
                 adds_transitions=int(comparison.comparison.adds_summary["mode_transition_count"]),
@@ -334,7 +337,7 @@ def build_dashboard_sensitivity(
         training_simulator = LongitudinalSimulator(base_config)
         examples = collect_imitation_examples(training_simulator, training_entries)
         learned_model = train_behavioral_cloning_model(examples).model
-    elif adds_controller_kind not in {"rule_based", "offline_optimized"}:
+    elif adds_controller_kind not in {"rule_based", "offline_optimized", "track_lap_balanced"}:
         raise ValueError(f"unknown adds_controller_kind: {adds_controller_kind}")
 
     rows: list[DashboardSensitivityRow] = []
@@ -347,6 +350,8 @@ def build_dashboard_sensitivity(
             adds_controller = RuleBasedADDSController(scenario.initial_gear)
         elif adds_controller_kind == "offline_optimized":
             adds_controller = OfflineOptimizedADDSController(scenario.initial_gear)
+        elif adds_controller_kind == "track_lap_balanced":
+            adds_controller = TrackLapBalancedADDSController(scenario.initial_gear)
         else:
             adds_controller = LearnedADDSController(
                 gear=scenario.initial_gear,
@@ -404,6 +409,8 @@ def _adds_controller_for_dashboard(
         return RuleBasedADDSController(gear)
     if adds_controller_kind == "offline_optimized":
         return OfflineOptimizedADDSController(gear)
+    if adds_controller_kind == "track_lap_balanced":
+        return TrackLapBalancedADDSController(gear)
     if adds_controller_kind == "learned":
         training_entries = tuple(item for item in catalog if item.split == "train")
         examples = collect_imitation_examples(simulator, training_entries)
@@ -429,7 +436,7 @@ def records_for_dashboard(
         mode = str(record["coupling_mode"])
         enriched["vehicle"] = vehicle_label
         enriched["coupling_mode_index"] = MODE_TO_INDEX.get(mode, -1)
-        enriched["fuel_used_ml"] = float(record["engine_fuel_used"]) * 1_000_000.0
+        enriched["fuel_used_ml"] = fuel_kg_to_ml(float(record["engine_fuel_used"]))
         enriched["speed_kmh"] = float(record["vehicle_speed"]) * 3.6
         enriched["target_speed_kmh"] = float(record["target_speed"]) * 3.6
         enriched["engine_speed_rpm"] = float(record["engine_speed"]) * 60.0 / (2.0 * 3.141592653589793)
@@ -449,7 +456,7 @@ def metric_cards_for_dashboard(
     return (
         {
             "label": "Fuel delta",
-            "value": float(deltas["delta_fuel_used"]) * 1_000_000.0,
+            "value": fuel_kg_to_ml(float(deltas["delta_fuel_used"])),
             "unit": "ml",
             "direction": "lower_is_better",
         },
@@ -485,13 +492,13 @@ def metric_cards_for_dashboard(
         },
         {
             "label": "Conventional fuel",
-            "value": float(conventional["fuel_used"]) * 1_000_000.0,
+            "value": fuel_kg_to_ml(float(conventional["fuel_used"])),
             "unit": "ml",
             "direction": "context",
         },
         {
             "label": "ADDS fuel",
-            "value": float(adds["fuel_used"]) * 1_000_000.0,
+            "value": fuel_kg_to_ml(float(adds["fuel_used"])),
             "unit": "ml",
             "direction": "context",
         },

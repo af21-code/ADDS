@@ -14,6 +14,7 @@ from .controllers import (
     ConventionalBaselineController,
     OfflineOptimizedADDSController,
     RuleBasedADDSController,
+    TrackLapBalancedADDSController,
 )
 from .data import write_trajectory_csv
 from .defaults import default_simulation_config
@@ -22,9 +23,10 @@ from .ml import collect_imitation_examples, train_behavioral_cloning_model
 from .profiles import PiecewiseLinearProfile
 from .scenario_catalog import phase4_scenario_catalog
 from .simulator import LongitudinalSimulator, Scenario, SimulationResult
+from .units import fuel_kg_to_ml
 
 
-TrackLapControllerKind = Literal["rule_based", "offline_optimized", "learned"]
+TrackLapControllerKind = Literal["rule_based", "offline_optimized", "track_lap_balanced", "learned"]
 
 
 @dataclass(frozen=True)
@@ -209,9 +211,9 @@ def track_lap_stats(comparison: PairedComparisonResult) -> tuple[TrackLapStat, .
         ),
         TrackLapStat(
             "Fuel used",
-            float(conventional["fuel_used"]) * 1_000_000.0,
-            float(adds["fuel_used"]) * 1_000_000.0,
-            float(deltas["delta_fuel_used"]) * 1_000_000.0,
+            fuel_kg_to_ml(float(conventional["fuel_used"])),
+            fuel_kg_to_ml(float(adds["fuel_used"])),
+            fuel_kg_to_ml(float(deltas["delta_fuel_used"])),
             "ml",
             "lower_is_better",
         ),
@@ -326,6 +328,8 @@ def _adds_controller(
         return RuleBasedADDSController(gear)
     if kind == "offline_optimized":
         return OfflineOptimizedADDSController(gear)
+    if kind == "track_lap_balanced":
+        return TrackLapBalancedADDSController(gear)
     if kind == "learned":
         training_entries = tuple(entry for entry in phase4_scenario_catalog() if entry.split == "train")
         model = train_behavioral_cloning_model(collect_imitation_examples(simulator, training_entries)).model
