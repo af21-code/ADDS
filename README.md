@@ -1,4 +1,7 @@
 # ADDS: Adaptive Drivetrain Decoupling System
+![ADDS CI Tests](https://github.com/af21-code/ADDS/actions/workflows/tests.yml/badge.svg)
+
+> Physics-based longitudinal vehicle dynamics simulator...
 
 ADDS is an AI-assisted vehicle dynamics simulation project for studying adaptive
 drivetrain decoupling. It compares two virtual vehicles under the same driving
